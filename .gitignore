@@ -1,0 +1,31 @@
+# 📦 Environnements virtuels
+venv/
+.venv/
+env/
+
+# 🗄️ Données et fichiers volumineux
+data/
+*.csv
+*.pdf
+*.md
+base_vectorielle*.json
+checkpoint_embeddings.json
+
+# ☁️ Fichiers temporaires Azure ML
+*.amltmp
+.amlignore
+.azureml/
+
+# 🔐 Variables d'environnement / Secrets (TRÈS IMPORTANT)
+.env
+.env.txt
+00_Config/.env.txt
+
+# 🌐 Node.js (Si tu as un dossier frontend)
+node_modules/
+dist/
+build/
+
+# 🐍 Python cache
+__pycache__/
+*.pyc
