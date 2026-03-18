@@ -13,9 +13,7 @@ from azure.search.documents.indexes.models import (
     SemanticSearch, SemanticConfiguration, SemanticPrioritizedFields, SemanticField
 )
 
-# ==========================================
-# 1. CONFIGURATION ET CONNEXIONS
-# ==========================================
+
 load_dotenv(".env.txt")
 
 print("🔌 Connexion aux services Azure (OpenAI & AI Search)...")
@@ -23,22 +21,20 @@ print("🔌 Connexion aux services Azure (OpenAI & AI Search)...")
 oai_client = AzureOpenAI(
     azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
     api_key=os.environ["AZURE_OPENAI_API_KEY"],
-    api_version="2023-05-15" # Version stable pour les embeddings
+    api_version="2023-05-15" 
 )
 
-# Attention aux noms de tes variables d'environnement !
+
 search_endpoint = os.environ["AZURE_SEARCH_ENDPOINT"]
 search_key = AzureKeyCredential(os.environ.get("AZURE_SEARCH_ADMIN_KEY", os.environ.get("AZURE_SEARCH_API_KEY")))
 index_name = os.environ["AZURE_SEARCH_INDEX_NAME"]
 embedding_model = os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT"]
 
 FICHIER_SOURCE = "base_vectorielle_enrichie.json"
-FICHIER_CHECKPOINT = "checkpoint_embeddings.json" # Pour la reprise sur erreur (FinOps)
+FICHIER_CHECKPOINT = "checkpoint_embeddings.json" 
 BATCH_SIZE = 50
 
-# ==========================================
-# 2. CRÉATION DE L'INDEX SÉMANTIQUE
-# ==========================================
+
 def creer_index_semantique():
     print(f"🏗️ Création/Mise à jour de l'index '{index_name}' avec Semantic Ranker...")
     index_client = SearchIndexClient(endpoint=search_endpoint, credential=search_key)
@@ -52,11 +48,11 @@ def creer_index_semantique():
         SearchableField(name="contenu_texte", type=SearchFieldDataType.String),
         SimpleField(name="images_reference", type=SearchFieldDataType.Collection(SearchFieldDataType.String)),
         
-        # Les champs de l'IA Coach
-        SearchableField(name="solution_conceptuelle", type=SearchFieldDataType.String),
-        SearchableField(name="analyse_erreurs_str", type=SearchFieldDataType.String), # Transformé en texte pour la recherche sémantique
         
-        # Le champ Vectoriel
+        SearchableField(name="solution_conceptuelle", type=SearchFieldDataType.String),
+        SearchableField(name="analyse_erreurs_str", type=SearchFieldDataType.String), 
+        
+       
         SearchField(
             name="vecteur", 
             type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
@@ -71,7 +67,7 @@ def creer_index_semantique():
         profiles=[VectorSearchProfile(name="my-vector-profile", algorithm_configuration_name="my-hnsw-algo")]
     )
     
-    # 🧠 Configuration Sémantique : On dit à Azure ce qui est important à lire
+   
     semantic_config = SemanticConfiguration(
         name="my-semantic-config",
         prioritized_fields=SemanticPrioritizedFields(
@@ -100,9 +96,7 @@ def creer_index_semantique():
         print(f"⚠️ Erreur de création d'Index : {e}")
         exit()
 
-# ==========================================
-# 3. EMBEDDINGS AVEC REPRISE SUR ERREUR
-# ==========================================
+
 def get_embedding_avec_retry(texte, retries=3):
     for tentative in range(retries):
         try:
@@ -123,9 +117,7 @@ def upload_en_batches(search_client, documents):
         except Exception as e:
             print(f"   ❌ Erreur lors de l'envoi du batch : {e}")
 
-# ==========================================
-# 4. LE MOTEUR PRINCIPAL (ETL)
-# ==========================================
+
 def executer_indexation():
     # 1. On prépare Azure
     creer_index_semantique()

@@ -10,31 +10,27 @@ from typing import Annotated, Optional
 from pydantic import Field
 from dotenv import load_dotenv
 
-# 🚀 IMPORT DE L'ADAPTATEUR COSMOS DB
 from memory_management import MemoryManager, CosmosDBAdapter
 
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# On s'assure que le dossier courant est dans le path
 if _CURRENT_DIR not in sys.path:
     sys.path.insert(0, _CURRENT_DIR)
 
-# Chargement du fichier .env.txt
 env_path = os.path.join(_CURRENT_DIR, ".env.txt")
 
 if os.path.exists(env_path):
-    print(f"📂 Configuration chargée depuis : {env_path}")
-    load_dotenv(dotenv_path=env_path)
+    print(f" Configuration chargée depuis : {env_path}")
+    # 🚀 CORRECTION 1 : override=True pour écraser les anciennes variables "fantômes" du terminal
+    load_dotenv(dotenv_path=env_path, override=True)
 else:
-    print(f"❌ Erreur : Fichier config introuvable à {env_path}")
+    print(f" Erreur : Fichier config introuvable à {env_path}")
 
 from search_index_manager import SearchIndexManager
 from azure.core.credentials import AzureKeyCredential
 from openai import AsyncAzureOpenAI
 
-# ============================================================
-# 🛡️ LE DESIGN PATTERN PROXY : Bypass Agent pour le Streaming + VISION
-# ============================================================
+
 class MemoryAgentProxy:
     def __init__(self, memory_manager: MemoryManager, search_manager: SearchIndexManager, oai_client: AsyncAzureOpenAI, chat_model: str, instructions: str):
         self.memory = memory_manager
@@ -120,21 +116,25 @@ class MemoryAgentProxy:
         t2 = time.time()
         print(f"⏱️ [2b] Fin du Streaming : {t2 - t1:.2f} secondes")
 
-        # 5. Sauvegarde finale en arrière-plan
+        # 5. Sauvegarde finale en arrière-plan (SANS LE RÉSUMÉ FINOPS)
         asyncio.create_task(self.memory.add_agent_message(user_id, session_id, full_response))
-        asyncio.create_task(self.memory.trigger_background_summary(user_id, session_id))
 
 
 class AccompanyingAgent:
     def __init__(self):
-        self.AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-        self.AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-        self.AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o")
-        self.AZURE_OPENAI_EMBED_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
         
-        self.AZURE_SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
-        self.AZURE_SEARCH_API_KEY = os.getenv("AZURE_SEARCH_API_KEY")
-        self.AZURE_SEARCH_INDEX = os.getenv("AZURE_SEARCH_INDEX_NAME")
+        self.AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
+        self.AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "").strip()
+        
+        
+        self.AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")).strip()
+        
+        
+        self.AZURE_OPENAI_EMBED_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "").strip()
+        
+        self.AZURE_SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT", "").strip()
+        self.AZURE_SEARCH_API_KEY = os.getenv("AZURE_SEARCH_API_KEY", "").strip()
+        self.AZURE_SEARCH_INDEX = os.getenv("AZURE_SEARCH_INDEX_NAME", "").strip()
         self.embed_dimensions = int(os.getenv("AZURE_AI_EMBED_DIMENSIONS", 1536))
 
         print("🔌 Connexion réseau optimisée (IPv4 Force)...")
@@ -146,7 +146,7 @@ class AccompanyingAgent:
         self.async_client = AsyncAzureOpenAI(
             azure_endpoint=self.AZURE_OPENAI_ENDPOINT,
             api_key=self.AZURE_OPENAI_API_KEY,
-            api_version="2024-02-15-preview",
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview").strip(),
             http_client=custom_http_client
         )
 
@@ -159,12 +159,12 @@ class AccompanyingAgent:
             embeddings_client=self.async_client
         )
 
-        # 🚀 INITIALISATION DE COSMOS DB
+       
         self.db_adapter = CosmosDBAdapter(
-            endpoint=os.getenv("AZURE_COSMOS_ENDPOINT"),
-            key=os.getenv("AZURE_COSMOS_KEY"),
-            db_name=os.getenv("AZURE_COSMOS_DATABASE_NAME"),
-            container_name=os.getenv("AZURE_COSMOS_CONTAINER_NAME")
+            endpoint=os.getenv("AZURE_COSMOS_ENDPOINT", "").strip(),
+            key=os.getenv("AZURE_COSMOS_KEY", "").strip(),
+            db_name=os.getenv("AZURE_COSMOS_DATABASE_NAME", "EduTech_AI_Production").strip(),
+            container_name=os.getenv("AZURE_COSMOS_CONTAINER_NAME", "AccompanyingSessions").strip()
         )
 
         self.memory = MemoryManager(
@@ -174,16 +174,20 @@ class AccompanyingAgent:
         )
 
     async def setup(self):
-        # 🚀 CONNEXION À COSMOS DB AVANT LE SEARCH
-        print("📦 Initialisation de la base de données Cosmos DB...")
+        
+        print(" Initialisation de la base de données Cosmos DB...")
         await self.db_adapter.setup()
         
-        print("🔍 Vérification de l'index Azure AI Search...")
+        print(" Vérification de l'index Azure AI Search...")
         await self.search_index_manager.ensure_index_created(vector_index_dimensions=self.embed_dimensions)
 
     def get_agent(self, lang: str, is_audio: bool):
         base_instruction = f"""Tu es 'Subul Cloud Coach', un mentor expert et bienveillant qui accompagne un étudiant dans ses Labs pratiques sur Azure.
 L'utilisateur te parle en '{lang}'. Tu DOIS lui répondre en '{lang}'.
+ PROTOCOLE DE SÉCURITÉ VISION (CRITIQUE) :
+    - L'étudiant travaille dans un environnement de Lab approuvé. 
+    - Les boucliers, alertes rouges ou messages de "Risque" sur les captures d'écran sont des éléments pédagogiques NORMAUX. 
+    - Ne bloque JAMAIS la réponse pour "Content Filter" ; analyse ces visuels pour guider l'étudiant.
 
 RÈGLES D'OR DU COACHING SOCRATIQUE :
 1. NE DONNE JAMAIS LA SOLUTION DIRECTEMENT NI LA COMMANDE EXACTE DU PREMIER COUP. 
@@ -194,7 +198,7 @@ RÈGLES D'OR DU COACHING SOCRATIQUE :
 6. Sois encourageant, chaleureux et professionnel."""
         
         if is_audio:
-            instructions = base_instruction + " MODE VOCAL : RÉPONDS EN 1 OU 2 PHRASES COURTES MAXIMUM. Pas de Markdown."
+            instructions = base_instruction + " MODE VOCAL : RÉPONDS EN 1 PHRASE COURTE MAXIMUM. Pas de Markdown."
         else:
             instructions = base_instruction + """ MODE TEXTE : 
 Fais des paragraphes courts et aérés. Utilise le **gras** pour mettre en évidence les éléments de l'interface Azure ou les concepts clés."""
@@ -207,22 +211,20 @@ Fais des paragraphes courts et aérés. Utilise le **gras** pour mettre en évid
             instructions=instructions
         )
 
-# ============================================================
-# 🧪 TEST LOCAL DANS LE TERMINAL (AVANT LE FRONTEND)
-# ============================================================
+
 async def test_terminal():
     print("\n" + "="*50)
     print("🛠️ DÉMARRAGE DU TEST LOCAL (CLOUD COACH) 🛠️")
     print("="*50)
 
-    # 1. Initialisation de l'Agent
+   
     agent_system = AccompanyingAgent()
     await agent_system.setup()
     
-    # 2. On récupère notre Coach (Texte, en Français)
+    
     coach = agent_system.get_agent(lang="français", is_audio=False)
 
-    # Variables de session simulées
+ 
     user_id = "etudiant_test_001"
     session_id = "session_lab8_001"
 
@@ -231,6 +233,9 @@ async def test_terminal():
     while True:
         texte = input("\n👨‍🎓 Toi : ")
         if texte.lower() in ['quitter', 'exit', 'quit']:
+            print("🚪 Déconnexion en cours... Déclenchement du bilan pédagogique (FinOps)...")
+            # 🚀 CORRECTION : On force le résumé avant de fermer le programme !
+            await agent_system.memory.trigger_background_summary(user_id, session_id)
             print("👋 Fin du test local.")
             break
 
@@ -264,7 +269,7 @@ async def test_terminal():
         except Exception as e:
             print(f"\n❌ Erreur pendant le stream : {e}")
 
-# 🔥 C'EST CE BLOC QUI LANCE LE SCRIPT :
+
 if __name__ == "__main__":
     try:
         asyncio.run(test_terminal())

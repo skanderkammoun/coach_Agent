@@ -1,0 +1,696 @@
+{
+  "platform": "CertifLearn",
+  "version": "1.0",
+  "last_updated": "2026-03-04",
+  "labs": [
+    {
+      "certif_id": "az-900",
+      "certif_title": "Azure Fundamentals",
+      "provider": "Microsoft Azure",
+      "labs": [
+        {
+          "id": "az900-lab1",
+          "order": 1,
+          "title": "Créer votre premier compte Azure et explorer le portail",
+          "duration_min": 30,
+          "difficulty": "debutant",
+          "objectives": ["Créer un compte Azure gratuit", "Explorer le portail Azure", "Naviguer entre les services"],
+          "prerequisites": ["Adresse email valide", "Carte bancaire (non débitée pour le tier gratuit)"],
+          "steps": [
+            { "step": 1, "title": "Créer le compte", "action": "Aller sur portal.azure.com → Cliquer 'Commencer gratuitement' → Remplir le formulaire avec email et carte bancaire (200$ de crédit offerts pendant 30 jours)" },
+            { "step": 2, "title": "Explorer le portail", "action": "Observer le tableau de bord → Cliquer sur 'Tous les services' → Explorer les catégories : Calcul, Réseau, Stockage" },
+            { "step": 3, "title": "Configurer le tableau de bord", "action": "Cliquer 'Modifier le tableau de bord' → Ajouter des tuiles : Ressources récentes, Santé des services" },
+            { "step": 4, "title": "Utiliser Cloud Shell", "action": "Cliquer l'icône >_ en haut → Choisir Bash → Taper : az account show → Observer les infos de votre abonnement" }
+          ],
+          "expected_result": "Compte Azure créé avec 200$ de crédit, portail exploré, Cloud Shell fonctionnel",
+          "cleanup": "Aucun nettoyage nécessaire pour ce lab",
+          "azure_cli_commands": ["az account show", "az account list-locations -o table"],
+          "tips": "Activez le MFA immédiatement après la création du compte pour sécuriser votre accès"
+        },
+        {
+          "id": "az900-lab2",
+          "order": 2,
+          "title": "Déployer une Machine Virtuelle Windows Server",
+          "duration_min": 45,
+          "difficulty": "debutant",
+          "objectives": ["Créer une VM Azure", "Comprendre les options de configuration", "Se connecter via RDP"],
+          "prerequisites": ["Compte Azure actif", "Lab 1 complété"],
+          "steps": [
+            { "step": 1, "title": "Créer un Groupe de Ressources", "action": "Portail → Groupes de ressources → Créer → Nom: 'rg-lab-az900' → Région: France Centre → Vérifier + créer" },
+            { "step": 2, "title": "Créer la VM", "action": "Rechercher 'Machines virtuelles' → Créer → Image: Windows Server 2022 Datacenter → Taille: B1s (la moins chère) → Définir admin/password" },
+            { "step": 3, "title": "Configurer le réseau", "action": "Onglet Réseau → Vérifier le VNet créé automatiquement → Laisser le port RDP 3389 ouvert pour ce lab" },
+            { "step": 4, "title": "Se connecter via RDP", "action": "VM créée → Cliquer 'Se connecter' → Télécharger le fichier .rdp → Ouvrir → Entrer les identifiants" },
+            { "step": 5, "title": "Arrêter la VM", "action": "Portail → Sélectionner la VM → Cliquer 'Arrêter' → Confirmer (IMPORTANT: arrêter pour ne pas consommer les crédits)" }
+          ],
+          "expected_result": "VM Windows déployée et accessible via RDP",
+          "cleanup": "OBLIGATOIRE : Supprimer le groupe de ressources 'rg-lab-az900' après le lab (Portail → Groupes de ressources → Supprimer)",
+          "azure_cli_commands": [
+            "az group create --name rg-lab-az900 --location francecentral",
+            "az vm create --resource-group rg-lab-az900 --name vm-lab01 --image Win2022Datacenter --admin-username azureuser",
+            "az vm stop --resource-group rg-lab-az900 --name vm-lab01",
+            "az group delete --name rg-lab-az900 --yes --no-wait"
+          ],
+          "tips": "Toujours arrêter et supprimer les ressources après les labs pour éviter de dépasser votre crédit gratuit"
+        },
+        {
+          "id": "az900-lab3",
+          "order": 3,
+          "title": "Créer et utiliser un compte de stockage Azure Blob",
+          "duration_min": 30,
+          "difficulty": "debutant",
+          "objectives": ["Créer un compte de stockage", "Uploader des fichiers dans un conteneur Blob", "Configurer l'accès public"],
+          "prerequisites": ["Compte Azure actif"],
+          "steps": [
+            { "step": 1, "title": "Créer le compte de stockage", "action": "Portail → Comptes de stockage → Créer → Nom unique ex: 'stlabaz900xxx' → Redondance: LRS (la moins chère pour les labs)" },
+            { "step": 2, "title": "Créer un conteneur", "action": "Compte de stockage créé → Conteneurs → + Conteneur → Nom: 'images' → Niveau d'accès: Blob (lecture publique)" },
+            { "step": 3, "title": "Uploader un fichier", "action": "Ouvrir le conteneur 'images' → Charger → Sélectionner une image depuis votre ordinateur → Charger" },
+            { "step": 4, "title": "Tester l'accès public", "action": "Cliquer sur le fichier uploadé → Copier l'URL → Ouvrir dans un onglet de navigation privée → Vérifier que l'image s'affiche" }
+          ],
+          "expected_result": "Fichier stocké dans Azure Blob accessible publiquement via URL",
+          "cleanup": "Supprimer le compte de stockage depuis le portail",
+          "azure_cli_commands": [
+            "az storage account create --name stlabaz900xxx --resource-group rg-labs --location francecentral --sku Standard_LRS",
+            "az storage container create --name images --account-name stlabaz900xxx --public-access blob",
+            "az storage blob upload --container-name images --file ./photo.jpg --name photo.jpg --account-name stlabaz900xxx"
+          ],
+          "tips": "L'URL d'un blob public suit ce format: https://<compte>.blob.core.windows.net/<conteneur>/<fichier>"
+        },
+        {
+          "id": "az900-lab4",
+          "order": 4,
+          "title": "Utiliser le Calculateur de Prix Azure et estimer un coût",
+          "duration_min": 20,
+          "difficulty": "debutant",
+          "objectives": ["Utiliser le calculateur de prix Azure", "Estimer le coût d'une architecture simple", "Comprendre les options d'optimisation"],
+          "prerequisites": ["Aucun (pas besoin de compte Azure)"],
+          "steps": [
+            { "step": 1, "title": "Ouvrir le calculateur", "action": "Aller sur azure.microsoft.com/fr-fr/pricing/calculator/" },
+            { "step": 2, "title": "Ajouter une VM", "action": "Cliquer 'Machines virtuelles' → Choisir: Région France Centre, OS Windows, Tier Standard, Instance B2s → Modifier à 730 heures/mois (temps plein)" },
+            { "step": 3, "title": "Ajouter du stockage", "action": "Cliquer 'Storage Accounts' → Choisir: LRS, 100 Go de stockage Blob" },
+            { "step": 4, "title": "Comparer les options", "action": "Observer le coût Pay-as-you-go → Changer en Reserved (1 an) → Noter la différence de prix" },
+            { "step": 5, "title": "Exporter l'estimation", "action": "Cliquer 'Exporter' → Télécharger en Excel pour garder une trace" }
+          ],
+          "expected_result": "Estimation de coût créée, comparaison entre Pay-as-you-go et Reserved réalisée",
+          "cleanup": "Aucun nettoyage nécessaire",
+          "azure_cli_commands": [],
+          "tips": "Une instance B2s tourne à environ 30-40€/mois en Pay-as-you-go vs 20-25€/mois avec Reserved 1 an"
+        }
+      ]
+    },
+    {
+      "certif_id": "ai-900",
+      "certif_title": "Azure AI Fundamentals",
+      "provider": "Microsoft Azure",
+      "labs": [
+        {
+          "id": "ai900-lab1",
+          "order": 1,
+          "title": "Analyser des images avec Azure Computer Vision",
+          "duration_min": 40,
+          "difficulty": "debutant",
+          "objectives": ["Créer une ressource Azure AI", "Appeler l'API Computer Vision", "Analyser et extraire du texte (OCR)"],
+          "prerequisites": ["Compte Azure actif"],
+          "steps": [
+            { "step": 1, "title": "Créer la ressource AI Services", "action": "Portail → Rechercher 'Azure AI Services' → Créer → Groupe de ressources: rg-ai-labs → Région: France Central → Niveau: Free F0" },
+            { "step": 2, "title": "Récupérer les clés", "action": "Ressource créée → Gestion des ressources → Clés et points de terminaison → Copier Clé 1 et Point de terminaison" },
+            { "step": 3, "title": "Tester avec Vision Studio", "action": "Aller sur portal.vision.cognitive.azure.com → Se connecter → Sélectionner votre ressource → Choisir 'Extrait du texte des images'" },
+            { "step": 4, "title": "Analyser une facture", "action": "Dans Vision Studio → Uploader une photo de facture ou reçu → Observer les résultats OCR → Vérifier les champs extraits" },
+            { "step": 5, "title": "Tester la description d'image", "action": "Retour Vision Studio → 'Ajouter des légendes aux images' → Uploader une photo → Lire la description générée par l'IA" }
+          ],
+          "expected_result": "Texte extrait d'une image, description automatique générée par l'IA",
+          "cleanup": "Supprimer le groupe de ressources rg-ai-labs",
+          "azure_cli_commands": [
+            "az cognitiveservices account create --name ai-lab-vision --resource-group rg-ai-labs --kind CognitiveServices --sku F0 --location francecentral"
+          ],
+          "tips": "Le niveau Free F0 offre 5000 transactions/mois gratuitement. Suffisant pour tous les labs."
+        },
+        {
+          "id": "ai900-lab2",
+          "order": 2,
+          "title": "Analyser des sentiments avec Azure Language Service",
+          "duration_min": 35,
+          "difficulty": "debutant",
+          "objectives": ["Utiliser Azure Language Service", "Analyser des sentiments dans du texte", "Extraire des entités nommées"],
+          "prerequisites": ["Ressource Azure AI Services créée (Lab 1)"],
+          "steps": [
+            { "step": 1, "title": "Ouvrir Language Studio", "action": "Aller sur language.cognitive.azure.com → Se connecter → Sélectionner votre ressource AI Services" },
+            { "step": 2, "title": "Analyser des sentiments", "action": "Onglet 'Classify text' → 'Analyze sentiment' → Coller cet avis: 'Le service était excellent, le personnel très accueillant mais la livraison était en retard.' → Analyser" },
+            { "step": 3, "title": "Observer les résultats", "action": "Lire le score de sentiment global (positif/négatif/neutre) → Observer les scores par phrase → Identifier les aspects positifs et négatifs" },
+            { "step": 4, "title": "Extraire des entités", "action": "Onglet 'Extract information' → 'Extract named entities' → Coller: 'Microsoft a annoncé Azure OpenAI Service le 16 janvier 2023 à Seattle.' → Analyser" },
+            { "step": 5, "title": "Tester la détection de langue", "action": "'Identify language' → Coller des phrases en arabe, français et anglais mélangées → Observer la détection automatique" }
+          ],
+          "expected_result": "Sentiment analysé avec scores par phrase, entités (noms, lieux, dates) extraites",
+          "cleanup": "Aucun nettoyage nécessaire (utilise la ressource du Lab 1)",
+          "azure_cli_commands": [],
+          "tips": "L'analyse de sentiment retourne un score de 0 à 1 pour positif, négatif et neutre. La somme fait toujours 1."
+        },
+        {
+          "id": "ai900-lab3",
+          "order": 3,
+          "title": "Créer un chatbot simple avec Azure Bot Service",
+          "duration_min": 50,
+          "difficulty": "debutant",
+          "objectives": ["Créer un bot FAQ avec QnA Maker", "Tester le bot dans Azure", "Comprendre les bases des chatbots"],
+          "prerequisites": ["Compte Azure actif"],
+          "steps": [
+            { "step": 1, "title": "Créer une base de connaissances", "action": "Aller sur language.cognitive.azure.com → Custom question answering → Créer un projet → Nom: 'BotFAQ'" },
+            { "step": 2, "title": "Ajouter des paires Q&A", "action": "Ajouter manuellement: Q: 'Quels sont vos horaires ?' / R: 'Nous sommes ouverts du lundi au vendredi de 9h à 18h.' → Ajouter 3-5 autres paires" },
+            { "step": 3, "title": "Entraîner et tester", "action": "Cliquer 'Save and train' → 'Test' → Poser vos questions → Vérifier les réponses" },
+            { "step": 4, "title": "Déployer la base de connaissances", "action": "Cliquer 'Deploy' → Confirmer → Récupérer les informations de connexion" },
+            { "step": 5, "title": "Tester via l'API", "action": "Utiliser le bouton 'Test' intégré → Poser différentes variantes de vos questions → Vérifier que le bot comprend les reformulations" }
+          ],
+          "expected_result": "Chatbot FAQ opérationnel répondant à des questions prédéfinies",
+          "cleanup": "Supprimer la ressource Language dans le portail Azure",
+          "azure_cli_commands": [],
+          "tips": "Plus vous ajoutez de variantes pour chaque question, plus le bot sera précis. Essayez au minimum 3 formulations par question."
+        }
+      ]
+    },
+    {
+      "certif_id": "sc-900",
+      "certif_title": "Security, Compliance & Identity Fundamentals",
+      "provider": "Microsoft Azure",
+      "labs": [
+        {
+          "id": "sc900-lab1",
+          "order": 1,
+          "title": "Configurer le MFA sur un compte Microsoft Entra ID",
+          "duration_min": 30,
+          "difficulty": "debutant",
+          "objectives": ["Activer le MFA sur Azure AD", "Configurer l'application Microsoft Authenticator", "Tester une connexion avec MFA"],
+          "prerequisites": ["Compte Azure actif", "Smartphone avec Microsoft Authenticator installé"],
+          "steps": [
+            { "step": 1, "title": "Accéder à Microsoft Entra ID", "action": "Portail Azure → Rechercher 'Microsoft Entra ID' → Sélectionner votre tenant" },
+            { "step": 2, "title": "Activer les paramètres de sécurité par défaut", "action": "Entra ID → Propriétés → Gérer les paramètres de sécurité par défaut → Activer" },
+            { "step": 3, "title": "Créer un utilisateur test", "action": "Entra ID → Utilisateurs → Nouvel utilisateur → Remplir: nom, username → Copier le mot de passe temporaire" },
+            { "step": 4, "title": "Configurer l'Authenticator", "action": "Se connecter avec le compte test → Suivre le processus d'enregistrement MFA → Scanner le QR code avec Microsoft Authenticator" },
+            { "step": 5, "title": "Tester la connexion MFA", "action": "Se déconnecter → Se reconnecter avec le compte test → Valider la notification sur l'app Authenticator" }
+          ],
+          "expected_result": "MFA activé et fonctionnel sur le compte de test",
+          "cleanup": "Supprimer l'utilisateur test créé",
+          "azure_cli_commands": [
+            "az ad user create --display-name 'TestUser' --password 'TempPass123!' --user-principal-name testuser@yourdomain.onmicrosoft.com"
+          ],
+          "tips": "Le MFA bloque 99,9% des attaques automatisées sur les comptes. Activez-le toujours en premier sur tout nouveau compte."
+        },
+        {
+          "id": "sc900-lab2",
+          "order": 2,
+          "title": "Explorer Microsoft Defender for Cloud",
+          "duration_min": 35,
+          "difficulty": "debutant",
+          "objectives": ["Explorer le tableau de bord Defender for Cloud", "Comprendre le Secure Score", "Analyser les recommandations de sécurité"],
+          "prerequisites": ["Compte Azure avec au moins une ressource déployée"],
+          "steps": [
+            { "step": 1, "title": "Ouvrir Defender for Cloud", "action": "Portail Azure → Rechercher 'Microsoft Defender for Cloud' → Ouvrir le tableau de bord" },
+            { "step": 2, "title": "Observer le Secure Score", "action": "Voir le score de sécurité actuel (sur 100) → Identifier les contrôles qui font baisser le score" },
+            { "step": 3, "title": "Analyser les recommandations", "action": "Cliquer 'Recommandations' → Filtrer par 'Haute sévérité' → Lire les détails de 2-3 recommandations" },
+            { "step": 4, "title": "Appliquer une recommandation facile", "action": "Trouver une recommandation comme 'Activer MFA pour les comptes d'abonnement' → Cliquer 'Quick Fix' si disponible" },
+            { "step": 5, "title": "Explorer les alertes de sécurité", "action": "Cliquer 'Alertes de sécurité' → Observer les types d'alertes (même sans alertes actives, explorer les types possibles)" }
+          ],
+          "expected_result": "Secure Score visualisé, recommandations analysées, au moins une mesure appliquée",
+          "cleanup": "Aucun nettoyage nécessaire",
+          "azure_cli_commands": [],
+          "tips": "Un Secure Score de 70%+ est considéré comme une bonne posture de sécurité pour un environnement de production."
+        }
+      ]
+    },
+    {
+      "certif_id": "aws-clf-c02",
+      "certif_title": "AWS Cloud Practitioner",
+      "provider": "Amazon Web Services",
+      "labs": [
+        {
+          "id": "clf-lab1",
+          "order": 1,
+          "title": "Créer un compte AWS et configurer IAM de base",
+          "duration_min": 40,
+          "difficulty": "debutant",
+          "objectives": ["Créer un compte AWS avec le Free Tier", "Sécuriser le compte root", "Créer un utilisateur IAM admin"],
+          "prerequisites": ["Email valide", "Carte bancaire"],
+          "steps": [
+            { "step": 1, "title": "Créer le compte AWS", "action": "Aller sur aws.amazon.com → Créer un compte → Choisir le plan gratuit → Remplir les informations → Vérifier par SMS" },
+            { "step": 2, "title": "Sécuriser le compte root", "action": "Se connecter → Cliquer votre nom en haut à droite → Sécurité → Activer MFA virtuel → Scanner le QR avec Google Authenticator" },
+            { "step": 3, "title": "Créer un utilisateur IAM", "action": "Services → IAM → Utilisateurs → Créer un utilisateur → Nom: 'admin-perso' → Accès console: Oui" },
+            { "step": 4, "title": "Assigner les permissions", "action": "Attacher les politiques → Rechercher 'AdministratorAccess' → Sélectionner → Suivant → Créer" },
+            { "step": 5, "title": "Configurer un alias de compte", "action": "IAM → Tableau de bord → Alias du compte → Créer un alias lisible → Tester la connexion avec l'URL IAM générée" }
+          ],
+          "expected_result": "Compte AWS sécurisé avec MFA, utilisateur IAM admin créé, connexion testée",
+          "cleanup": "Aucun nettoyage (configuration de base à conserver)",
+          "aws_cli_commands": [
+            "aws sts get-caller-identity",
+            "aws iam create-user --user-name admin-perso",
+            "aws iam attach-user-policy --user-name admin-perso --policy-arn arn:aws:iam::aws:policy/AdministratorAccess"
+          ],
+          "tips": "NE JAMAIS utiliser le compte root pour les opérations quotidiennes. Créez toujours un utilisateur IAM."
+        },
+        {
+          "id": "clf-lab2",
+          "order": 2,
+          "title": "Héberger un site web statique sur Amazon S3",
+          "duration_min": 40,
+          "difficulty": "debutant",
+          "objectives": ["Créer un bucket S3", "Activer l'hébergement de site web statique", "Rendre le site accessible publiquement"],
+          "prerequisites": ["Compte AWS avec utilisateur IAM"],
+          "steps": [
+            { "step": 1, "title": "Créer le bucket S3", "action": "Console AWS → S3 → Créer un compartiment → Nom unique ex: 'mon-site-web-certif-2026' → Région: eu-west-3 (Paris) → Décocher 'Bloquer tout accès public'" },
+            { "step": 2, "title": "Créer une page HTML", "action": "Créer un fichier index.html sur votre ordinateur avec: <html><body><h1>Mon site AWS!</h1><p>Lab CCP réussi!</p></body></html>" },
+            { "step": 3, "title": "Uploader les fichiers", "action": "Bucket créé → Objets → Charger → Sélectionner index.html → Charger" },
+            { "step": 4, "title": "Activer l'hébergement web", "action": "Onglet 'Propriétés' → Hébergement de site Web statique → Activer → Document index: index.html → Enregistrer" },
+            { "step": 5, "title": "Configurer la politique d'accès", "action": "Onglet 'Autorisations' → Politique de compartiment → Coller la politique de lecture publique → Enregistrer" },
+            { "step": 6, "title": "Tester le site", "action": "Propriétés → URL de l'hébergement → Ouvrir dans un navigateur → Vérifier que votre page s'affiche" }
+          ],
+          "policy_example": "{ \"Version\": \"2012-10-17\", \"Statement\": [{ \"Sid\": \"PublicRead\", \"Effect\": \"Allow\", \"Principal\": \"*\", \"Action\": \"s3:GetObject\", \"Resource\": \"arn:aws:s3:::mon-site-web-certif-2026/*\" }] }",
+          "expected_result": "Site web statique en ligne et accessible via une URL S3 publique",
+          "cleanup": "Vider et supprimer le bucket S3 après le lab",
+          "aws_cli_commands": [
+            "aws s3 mb s3://mon-site-web-certif-2026 --region eu-west-3",
+            "aws s3 cp index.html s3://mon-site-web-certif-2026/",
+            "aws s3 website s3://mon-site-web-certif-2026/ --index-document index.html",
+            "aws s3 rb s3://mon-site-web-certif-2026 --force"
+          ],
+          "tips": "Le coût de ce lab est quasi nul (quelques centimes). S3 Standard coûte environ 0,023$/Go/mois."
+        },
+        {
+          "id": "clf-lab3",
+          "order": 3,
+          "title": "Lancer et se connecter à une instance EC2",
+          "duration_min": 45,
+          "difficulty": "debutant",
+          "objectives": ["Lancer une instance EC2 Linux", "Créer et utiliser une paire de clés SSH", "Se connecter via EC2 Instance Connect"],
+          "prerequisites": ["Compte AWS actif"],
+          "steps": [
+            { "step": 1, "title": "Lancer une instance EC2", "action": "Console → EC2 → Lancer une instance → Nom: 'lab-ec2-01' → AMI: Amazon Linux 2023 → Type: t2.micro (Free Tier) → Créer une nouvelle paire de clés → Télécharger le .pem" },
+            { "step": 2, "title": "Configurer le Security Group", "action": "Dans la config EC2 → Réseau → Sécurité → Autoriser SSH (port 22) uniquement depuis 'Mon IP' → Lancer l'instance" },
+            { "step": 3, "title": "Se connecter via Instance Connect", "action": "EC2 → Instances → Sélectionner l'instance → Connecter → EC2 Instance Connect → Se connecter (navigateur web)" },
+            { "step": 4, "title": "Explorer l'instance", "action": "Dans le terminal: uname -a (voir l'OS) → df -h (espace disque) → free -h (mémoire) → curl http://169.254.169.254/latest/meta-data/instance-type (métadonnées)" },
+            { "step": 5, "title": "Installer un serveur web", "action": "sudo yum update -y → sudo yum install -y httpd → sudo systemctl start httpd → echo 'Hello AWS!' | sudo tee /var/www/html/index.html" },
+            { "step": 6, "title": "Tester le serveur web", "action": "EC2 → Security Group → Ajouter règle HTTP (port 80) → Copier l'IP publique → Ouvrir dans le navigateur" }
+          ],
+          "expected_result": "Instance EC2 Linux en cours d'exécution, serveur web Apache accessible",
+          "cleanup": "OBLIGATOIRE: Terminer (supprimer) l'instance EC2 dans la console",
+          "aws_cli_commands": [
+            "aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId,State.Name,PublicIpAddress]' --output table",
+            "aws ec2 stop-instances --instance-ids i-XXXXXXXX",
+            "aws ec2 terminate-instances --instance-ids i-XXXXXXXX"
+          ],
+          "tips": "t2.micro est gratuit pendant 750h/mois la première année. Ne laissez jamais une instance tourner inutilement!"
+        },
+        {
+          "id": "clf-lab4",
+          "order": 4,
+          "title": "Créer un budget AWS et configurer des alertes",
+          "duration_min": 20,
+          "difficulty": "debutant",
+          "objectives": ["Créer un budget mensuel AWS", "Configurer des alertes email", "Explorer Cost Explorer"],
+          "prerequisites": ["Compte AWS actif"],
+          "steps": [
+            { "step": 1, "title": "Accéder à AWS Budgets", "action": "Console → Cliquer votre nom → Billing and Cost Management → Budgets → Créer un budget" },
+            { "step": 2, "title": "Configurer le budget", "action": "Type: Coût → Nom: 'Budget-Mensuel-10USD' → Montant: 10$ → Période: Mensuelle → Récurrente" },
+            { "step": 3, "title": "Ajouter des alertes", "action": "Ajouter une alerte à 80% du budget → Email: votre email → Sauvegarder" },
+            { "step": 4, "title": "Explorer Cost Explorer", "action": "Billing → Cost Explorer → Explorer les graphiques de dépenses → Filtrer par service → Voir les tendances" }
+          ],
+          "expected_result": "Budget de 10$ créé avec alertes email automatiques",
+          "cleanup": "Aucun nettoyage nécessaire",
+          "aws_cli_commands": [],
+          "tips": "Créez TOUJOURS un budget dès l'ouverture d'un compte AWS. C'est votre filet de sécurité contre les mauvaises surprises."
+        }
+      ]
+    },
+    {
+      "certif_id": "aws-saa-c03",
+      "certif_title": "AWS Solutions Architect Associate",
+      "provider": "Amazon Web Services",
+      "labs": [
+        {
+          "id": "saa-lab1",
+          "order": 1,
+          "title": "Concevoir un VPC avec sous-réseaux publics et privés",
+          "duration_min": 60,
+          "difficulty": "intermediaire",
+          "objectives": ["Créer un VPC personnalisé", "Configurer des sous-réseaux publics et privés", "Mettre en place Internet Gateway et NAT Gateway"],
+          "prerequisites": ["Compte AWS", "Connaissance des bases du réseau IP"],
+          "steps": [
+            { "step": 1, "title": "Créer le VPC", "action": "VPC → Créer VPC → VPC uniquement → Nom: 'vpc-lab-saa' → CIDR IPv4: 10.0.0.0/16" },
+            { "step": 2, "title": "Créer les sous-réseaux", "action": "Sous-réseaux → Créer → Public-AZ1: 10.0.1.0/24 (eu-west-3a) → Public-AZ2: 10.0.2.0/24 (eu-west-3b) → Privé-AZ1: 10.0.10.0/24 → Privé-AZ2: 10.0.20.0/24" },
+            { "step": 3, "title": "Créer et attacher l'Internet Gateway", "action": "Passerelles Internet → Créer → Nom: igw-lab → Attacher au VPC vpc-lab-saa" },
+            { "step": 4, "title": "Configurer les tables de routage", "action": "Tables de routage → Créer rt-public → Ajouter route 0.0.0.0/0 → igw-lab → Associer les sous-réseaux publics" },
+            { "step": 5, "title": "Créer une NAT Gateway", "action": "Passerelles NAT → Créer → Sous-réseau: Public-AZ1 → Allouer une IP élastique → Créer" },
+            { "step": 6, "title": "Configurer le routage privé", "action": "Créer rt-private → Ajouter route 0.0.0.0/0 → NAT Gateway → Associer les sous-réseaux privés" },
+            { "step": 7, "title": "Tester la connectivité", "action": "Lancer une EC2 dans le sous-réseau public (avec IP publique) → Se connecter → Ping 8.8.8.8 (doit fonctionner)" }
+          ],
+          "expected_result": "VPC 3-tier opérationnel avec isolation réseau public/privé et accès internet sortant pour le privé",
+          "cleanup": "Supprimer dans l'ordre : NAT Gateway (attendre), libérer l'IP élastique, supprimer le VPC (supprime les sous-réseaux et IGW)",
+          "aws_cli_commands": [
+            "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=vpc-lab-saa}]'",
+            "aws ec2 create-subnet --vpc-id vpc-XXXXXX --cidr-block 10.0.1.0/24 --availability-zone eu-west-3a",
+            "aws ec2 create-internet-gateway",
+            "aws ec2 attach-internet-gateway --vpc-id vpc-XXXXXX --internet-gateway-id igw-XXXXXX"
+          ],
+          "tips": "La NAT Gateway coûte environ 0.045$/heure + transfert. SUPPRIMEZ-LA après le lab (environ 1$/heure oublié = 30$/mois)."
+        },
+        {
+          "id": "saa-lab2",
+          "order": 2,
+          "title": "Déployer une architecture haute disponibilité avec ALB et Auto Scaling",
+          "duration_min": 90,
+          "difficulty": "intermediaire",
+          "objectives": ["Créer un Application Load Balancer", "Configurer un groupe Auto Scaling", "Tester le scaling automatique"],
+          "prerequisites": ["VPC avec sous-réseaux publics créé (Lab 1)"],
+          "steps": [
+            { "step": 1, "title": "Créer un Launch Template", "action": "EC2 → Launch Templates → Créer → AMI: Amazon Linux 2023 → t2.micro → User Data: script qui installe Apache et affiche le nom de l'instance" },
+            { "step": 2, "title": "Créer un Target Group", "action": "EC2 → Groupes cibles → Créer → Type: Instances → Protocole: HTTP 80 → Health check: / → Créer (sans instances pour l'instant)" },
+            { "step": 3, "title": "Créer l'Application Load Balancer", "action": "EC2 → Load Balancers → Créer ALB → Scheme: Internet-facing → VPC: vpc-lab-saa → Sous-réseaux: les 2 publics → Listener HTTP 80 → Target Group créé ci-dessus" },
+            { "step": 4, "title": "Créer le groupe Auto Scaling", "action": "EC2 → Groupes Auto Scaling → Créer → Launch Template → VPC → Sous-réseaux: les 2 privés → Attacher au Load Balancer → Min:1 Souhaité:2 Max:4" },
+            { "step": 5, "title": "Configurer une politique de scaling", "action": "Groupe ASG créé → Politiques de scaling → Ajouter → Tracking cible → Métrique: CPU → Cible: 50% → Créer" },
+            { "step": 6, "title": "Tester la haute disponibilité", "action": "Copier l'URL DNS du Load Balancer → Ouvrir dans le navigateur → Raffraîchir plusieurs fois → Observer le nom de l'instance qui change (round-robin)" }
+          ],
+          "user_data_script": "#!/bin/bash\nyum update -y\nyum install -y httpd\nsystemctl start httpd\nsystemctl enable httpd\nINSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)\nAZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\necho \"<html><body><h1>Instance: $INSTANCE_ID</h1><h2>AZ: $AZ</h2></body></html>\" > /var/www/html/index.html",
+          "expected_result": "Load Balancer distribue le trafic sur 2 instances, Auto Scaling opérationnel",
+          "cleanup": "Supprimer: Groupe Auto Scaling → Load Balancer → Target Group → Launch Template",
+          "aws_cli_commands": [],
+          "tips": "Attendez que toutes les instances soient 'Healthy' dans le Target Group avant de tester. Cela prend 2-3 minutes."
+        },
+        {
+          "id": "saa-lab3",
+          "order": 3,
+          "title": "Configurer les classes de stockage S3 et les Lifecycle Policies",
+          "duration_min": 45,
+          "difficulty": "intermediaire",
+          "objectives": ["Comprendre les classes S3 en pratique", "Créer des règles Lifecycle", "Activer le versioning S3"],
+          "prerequisites": ["Compte AWS actif"],
+          "steps": [
+            { "step": 1, "title": "Créer un bucket avec versioning", "action": "S3 → Créer bucket → Nom: 'lab-lifecycle-saa-xxx' → Activer le versioning → Créer" },
+            { "step": 2, "title": "Uploader des fichiers test", "action": "Uploader 3-4 fichiers → Re-uploader le même fichier avec des modifications → Voir les versions dans 'Afficher les versions'" },
+            { "step": 3, "title": "Créer une règle Lifecycle", "action": "Gestion → Règles de cycle de vie → Créer → Nom: 'archive-old-files' → Portée: tous les objets" },
+            { "step": 4, "title": "Configurer les transitions", "action": "Ajouter transition: Après 30 jours → Standard-IA → Après 90 jours → Glacier Instant Retrieval → Après 365 jours → Glacier Deep Archive → Créer" },
+            { "step": 5, "title": "Configurer l'expiration", "action": "Dans la même règle → Expirer les versions non courantes après 730 jours (2 ans) → Supprimer les marqueurs d'expiration → Sauvegarder" },
+            { "step": 6, "title": "Analyser avec S3 Storage Lens", "action": "S3 → Storage Lens → Tableau de bord par défaut → Explorer les métriques de coût et d'utilisation" }
+          ],
+          "expected_result": "Lifecycle Policy configurée avec transitions automatiques entre classes de stockage",
+          "cleanup": "Supprimer tous les objets (y compris les versions) puis supprimer le bucket",
+          "aws_cli_commands": [
+            "aws s3api create-bucket --bucket lab-lifecycle-saa-xxx --region eu-west-3 --create-bucket-configuration LocationConstraint=eu-west-3",
+            "aws s3api put-bucket-versioning --bucket lab-lifecycle-saa-xxx --versioning-configuration Status=Enabled",
+            "aws s3 cp test.txt s3://lab-lifecycle-saa-xxx/"
+          ],
+          "tips": "Les règles Lifecycle ne s'appliquent pas instantanément. Dans la réalité, elles s'exécutent une fois par jour par AWS."
+        }
+      ]
+    },
+    {
+      "certif_id": "aws-aif-c01",
+      "certif_title": "AWS AI Practitioner",
+      "provider": "Amazon Web Services",
+      "labs": [
+        {
+          "id": "aif-lab1",
+          "order": 1,
+          "title": "Analyser des images avec Amazon Rekognition",
+          "duration_min": 35,
+          "difficulty": "debutant",
+          "objectives": ["Utiliser la console Rekognition", "Détecter des objets et du texte", "Analyser des expressions faciales"],
+          "prerequisites": ["Compte AWS actif"],
+          "steps": [
+            { "step": 1, "title": "Ouvrir Rekognition", "action": "Console AWS → Rekognition → Utiliser les demos disponibles dans la console" },
+            { "step": 2, "title": "Tester la détection d'objets", "action": "Détection d'étiquettes → Uploader une photo de rue, paysage ou scène complexe → Observer les objets détectés avec leurs scores de confiance" },
+            { "step": 3, "title": "Tester la détection de texte", "action": "Détection de texte → Uploader une photo de panneau, menu ou document → Observer le texte extrait" },
+            { "step": 4, "title": "Analyser un visage", "action": "Analyse de visage → Uploader une photo portrait → Observer : âge estimé, expressions, émotions, présence de lunettes/barbe" },
+            { "step": 5, "title": "Tester via AWS CLI", "action": "aws rekognition detect-labels --image '{\"S3Object\":{\"Bucket\":\"mon-bucket\",\"Name\":\"photo.jpg\"}}' --region eu-west-1" }
+          ],
+          "expected_result": "Images analysées avec détection d'objets, texte et analyse de visages",
+          "cleanup": "Aucun nettoyage (les démos Rekognition ne créent pas de ressources persistantes)",
+          "aws_cli_commands": [
+            "aws rekognition detect-labels --image '{\"Bytes\":\"<base64>\"}' --max-labels 10",
+            "aws rekognition detect-text --image '{\"S3Object\":{\"Bucket\":\"mybucket\",\"Name\":\"text-image.jpg\"}}'"
+          ],
+          "tips": "Rekognition a un tier gratuit de 5000 images/mois pendant 12 mois. Toutes les démos sont incluses."
+        },
+        {
+          "id": "aif-lab2",
+          "order": 2,
+          "title": "Construire un modèle ML no-code avec SageMaker Canvas",
+          "duration_min": 60,
+          "difficulty": "debutant",
+          "objectives": ["Utiliser SageMaker Canvas pour créer un modèle sans code", "Entraîner un modèle de prédiction", "Interpréter les métriques du modèle"],
+          "prerequisites": ["Compte AWS avec accès SageMaker"],
+          "steps": [
+            { "step": 1, "title": "Ouvrir SageMaker Canvas", "action": "Console → SageMaker → Canvas → Ouvrir Canvas → Attendre l'initialisation (2-3 min)" },
+            { "step": 2, "title": "Importer des données", "action": "Datasets → Importer → Upload → Utiliser le CSV exemple de prédiction de prix immobilier (disponible sur le repo GitHub du lab)" },
+            { "step": 3, "title": "Créer un modèle", "action": "New Model → Nom: 'PredictionPrix' → Sélectionner le dataset → Colonne cible: 'prix' → Canvas détecte automatiquement: Régression" },
+            { "step": 4, "title": "Entraîner le modèle", "action": "Quick Build (10-15 min) → Observer la progression → Attendre la fin de l'entraînement" },
+            { "step": 5, "title": "Analyser les métriques", "action": "Voir le RMSE (erreur quadratique) → Observer les features les plus importantes (superficie, localisation...) → Comprendre les valeurs SHAP" },
+            { "step": 6, "title": "Faire des prédictions", "action": "Onglet Predict → Saisir manuellement: superficie=100, chambres=3, ville=Paris → Obtenir le prix prédit" }
+          ],
+          "sample_csv_url": "https://raw.githubusercontent.com/aws-samples/amazon-sagemaker-canvas-getting-started/main/datasets/house_prices.csv",
+          "expected_result": "Modèle de prédiction de prix immobilier entraîné et capable de faire des prédictions",
+          "cleanup": "Fermer Canvas (arrêter la session pour éviter les frais: env. 1.9$/heure)",
+          "aws_cli_commands": [],
+          "tips": "SageMaker Canvas coûte 1.90$/heure. Fermez TOUJOURS la session quand vous avez terminé!"
+        },
+        {
+          "id": "aif-lab3",
+          "order": 3,
+          "title": "Explorer Amazon Bedrock et l'IA Générative",
+          "duration_min": 40,
+          "difficulty": "debutant",
+          "objectives": ["Accéder aux Foundation Models sur Bedrock", "Tester différents modèles IA", "Créer un prompt efficace"],
+          "prerequisites": ["Compte AWS avec accès Bedrock activé (us-east-1)"],
+          "steps": [
+            { "step": 1, "title": "Activer les modèles Bedrock", "action": "Console → Bedrock → Accès aux modèles → Demander l'accès à Claude 3 Sonnet et Mistral 7B → Attendre l'approbation (instantané)" },
+            { "step": 2, "title": "Tester dans le Playground", "action": "Bedrock → Playground de texte → Sélectionner Claude 3 Sonnet → Taper: 'Explique le cloud computing en 3 points simples' → Observer la réponse" },
+            { "step": 3, "title": "Tester le prompt engineering", "action": "Modifier le prompt → Ajouter: 'Réponds en JSON avec les clés: titre, description, exemple' → Observer la différence de format" },
+            { "step": 4, "title": "Comparer des modèles", "action": "Tester la même question avec Mistral → Comparer qualité, vitesse et style de réponse avec Claude" },
+            { "step": 5, "title": "Explorer les paramètres", "action": "Modifier Temperature (0=déterministe, 1=créatif) → Modifier Max Tokens → Observer l'impact sur les réponses" }
+          ],
+          "expected_result": "Foundation Models testés, différences entre modèles identifiées, prompt engineering pratiqué",
+          "cleanup": "Aucun nettoyage (les appels Bedrock sont facturés par token, les tests sont quasi-gratuits)",
+          "aws_cli_commands": [
+            "aws bedrock list-foundation-models --region us-east-1 --output table",
+            "aws bedrock-runtime invoke-model --model-id anthropic.claude-3-sonnet-20240229-v1:0 --body '{\"messages\":[{\"role\":\"user\",\"content\":\"Hello!\"}],\"max_tokens\":100,\"anthropic_version\":\"bedrock-2023-05-31\"}' --region us-east-1 output.json"
+          ],
+          "tips": "Bedrock est disponible uniquement dans certaines régions. Utilisez us-east-1 pour avoir accès à tous les modèles."
+        }
+      ]
+    },
+    {
+      "certif_id": "aws-scs-c02",
+      "certif_title": "AWS Security Specialty",
+      "provider": "Amazon Web Services",
+      "labs": [
+        {
+          "id": "scs-lab1",
+          "order": 1,
+          "title": "Configurer AWS CloudTrail et analyser les logs",
+          "duration_min": 45,
+          "difficulty": "intermediaire",
+          "objectives": ["Activer CloudTrail multi-région", "Stocker les logs dans S3 sécurisé", "Analyser les logs avec CloudWatch Logs Insights"],
+          "prerequisites": ["Compte AWS actif"],
+          "steps": [
+            { "step": 1, "title": "Créer un trail CloudTrail", "action": "Console → CloudTrail → Trails → Créer → Nom: 'trail-securite-prod' → Appliquer à toutes les régions: Oui → Nouveau bucket S3 → Activer SSE-KMS" },
+            { "step": 2, "title": "Activer CloudWatch Logs", "action": "Dans le trail → Configurer CloudWatch Logs → Nouveau groupe de logs: '/aws/cloudtrail/lab' → Créer un rôle IAM → Activer" },
+            { "step": 3, "title": "Générer des événements", "action": "Effectuer des actions: créer/supprimer une VM EC2, changer une politique IAM, accéder à S3 → Attendre 5-10 minutes pour que les logs arrivent" },
+            { "step": 4, "title": "Analyser avec Logs Insights", "action": "CloudWatch → Log Insights → Sélectionner le groupe CloudTrail → Taper la requête: fields @timestamp, userIdentity.type, eventName, sourceIPAddress | sort @timestamp desc | limit 20" },
+            { "step": 5, "title": "Chercher les erreurs d'accès", "action": "Modifier la requête pour filtrer: | filter errorCode='AccessDenied' → Identifier les tentatives d'accès refusées" }
+          ],
+          "example_queries": {
+            "all_events": "fields @timestamp, userIdentity.type, eventName, sourceIPAddress | sort @timestamp desc | limit 50",
+            "access_denied": "fields @timestamp, userIdentity.arn, eventName, errorCode | filter errorCode = 'AccessDenied' | sort @timestamp desc",
+            "root_activity": "fields @timestamp, eventName, sourceIPAddress | filter userIdentity.type = 'Root' | sort @timestamp desc",
+            "iam_changes": "fields @timestamp, userIdentity.arn, eventName | filter eventSource = 'iam.amazonaws.com' | sort @timestamp desc"
+          },
+          "expected_result": "CloudTrail actif, logs analysables dans CloudWatch Logs Insights",
+          "cleanup": "Désactiver le trail CloudTrail et supprimer le bucket S3 de logs",
+          "aws_cli_commands": [
+            "aws cloudtrail describe-trails",
+            "aws cloudtrail get-trail-status --name trail-securite-prod",
+            "aws cloudtrail lookup-events --max-results 10 --query 'Events[*].[EventName,Username,EventTime]' --output table"
+          ],
+          "tips": "CloudTrail conserve 90 jours d'historique gratuit dans la console. Pour plus longtemps, envoyez vers S3."
+        },
+        {
+          "id": "scs-lab2",
+          "order": 2,
+          "title": "Activer Amazon GuardDuty et simuler une menace",
+          "duration_min": 50,
+          "difficulty": "intermediaire",
+          "objectives": ["Activer GuardDuty", "Utiliser le générateur de findings de test", "Analyser et remédier à une alerte"],
+          "prerequisites": ["Compte AWS actif", "CloudTrail activé (Lab 1)"],
+          "steps": [
+            { "step": 1, "title": "Activer GuardDuty", "action": "Console → GuardDuty → Commencer → Activer GuardDuty → Confirmer (premier mois gratuit)" },
+            { "step": 2, "title": "Explorer le tableau de bord", "action": "Observer les sections: Findings, Statistiques, Sources de données → Vérifier que CloudTrail et VPC Flow Logs sont activés comme sources" },
+            { "step": 3, "title": "Générer des findings de test", "action": "Paramètres → Générer des exemples de findings → Générer → Retourner aux Findings → Observer les 40+ types d'alertes générées" },
+            { "step": 4, "title": "Analyser un finding critique", "action": "Filtrer par 'HIGH' → Ouvrir un finding de type 'UnauthorizedAccess:EC2/SSHBruteForce' → Lire les détails: IP attaquante, instance cible, fréquence" },
+            { "step": 5, "title": "Créer une règle de suppression", "action": "Dans un finding → Actions → Créer une règle de suppression → Pour les findings de test: filtre sur 'sample:true'" },
+            { "step": 6, "title": "Configurer une alerte EventBridge", "action": "EventBridge → Règles → Créer → Source: GuardDuty → Type: HIGH severity → Cible: SNS topic (email) → Créer" }
+          ],
+          "expected_result": "GuardDuty actif avec findings de test analysés, alerte email configurée pour les menaces HIGH",
+          "cleanup": "Supprimer les findings de test, garder GuardDuty actif (30 premiers jours gratuits)",
+          "aws_cli_commands": [
+            "aws guardduty list-detectors",
+            "aws guardduty create-sample-findings --detector-id <detector-id> --finding-types 'UnauthorizedAccess:EC2/SSHBruteForce'",
+            "aws guardduty list-findings --detector-id <detector-id> --finding-criteria '{\"Criterion\":{\"severity\":{\"Gte\":7}}}'  "
+          ],
+          "tips": "GuardDuty est payant après 30 jours (environ 1-4$/mois pour un compte de lab). Pensez à le désactiver après."
+        },
+        {
+          "id": "scs-lab3",
+          "order": 3,
+          "title": "Gérer des secrets avec AWS Secrets Manager et KMS",
+          "duration_min": 40,
+          "difficulty": "intermediaire",
+          "objectives": ["Stocker un secret dans Secrets Manager", "Configurer la rotation automatique", "Utiliser KMS pour le chiffrement"],
+          "prerequisites": ["Compte AWS actif"],
+          "steps": [
+            { "step": 1, "title": "Créer une clé KMS", "action": "Console → KMS → Clés gérées par le client → Créer → Symétrique → Utilisation: Chiffrer/déchiffrer → Nom: 'cle-secrets-lab' → Créer" },
+            { "step": 2, "title": "Créer un secret", "action": "Secrets Manager → Stocker un nouveau secret → Type: Autre type → Clés/valeurs: db_user=admin, db_password=MonMotDePasse123! → Clé KMS: cle-secrets-lab" },
+            { "step": 3, "title": "Nommer et configurer", "action": "Nom: 'prod/database/credentials' → Description: 'Identifiants base de données production' → Rotation: Désactiver pour ce lab" },
+            { "step": 4, "title": "Récupérer le secret via CLI", "action": "aws secretsmanager get-secret-value --secret-id 'prod/database/credentials' → Observer le secret déchiffré automatiquement" },
+            { "step": 5, "title": "Simuler un accès depuis une application", "action": "Créer une petite fonction Lambda → Ajouter la permission Secrets Manager → Récupérer le secret dans le code → Tester" }
+          ],
+          "lambda_code_example": "import boto3, json\ndef lambda_handler(event, context):\n    client = boto3.client('secretsmanager')\n    response = client.get_secret_value(SecretId='prod/database/credentials')\n    secret = json.loads(response['SecretString'])\n    print(f'User: {secret[\"db_user\"]}')  # Ne jamais logger les mots de passe en prod!\n    return {'statusCode': 200}",
+          "expected_result": "Secret stocké et chiffré avec KMS, accessible programmatiquement via SDK",
+          "cleanup": "Supprimer le secret (récupération de 7 jours par défaut, utiliser --force-delete-without-recovery) et la clé KMS (désactiver puis planifier la suppression)",
+          "aws_cli_commands": [
+            "aws secretsmanager get-secret-value --secret-id 'prod/database/credentials'",
+            "aws secretsmanager delete-secret --secret-id 'prod/database/credentials' --force-delete-without-recovery",
+            "aws kms schedule-key-deletion --key-id <key-id> --pending-window-in-days 7"
+          ],
+          "tips": "Ne jamais stocker de mots de passe dans le code source ou les variables d'environnement. Utilisez toujours Secrets Manager."
+        }
+      ]
+    },
+    {
+      "certif_id": "gcp-ccp",
+      "certif_title": "Google Cloud Certified - Cloud Digital Leader",
+      "provider": "Google Cloud Platform",
+      "labs": [
+        {
+          "id": "ccp-lab1",
+          "order": 1,
+          "title": "Créer un compte GCP et explorer la console",
+          "duration_min": 30,
+          "difficulty": "debutant",
+          "objectives": ["Créer un compte Google Cloud", "Explorer la console GCP", "Utiliser Cloud Shell"],
+          "prerequisites": ["Compte Google (Gmail)"],
+          "steps": [
+            { "step": 1, "title": "Créer le compte GCP", "action": "Aller sur cloud.google.com → Démarrer gratuitement → Se connecter avec Gmail → Accepter les conditions → Entrer les infos de facturation (300$ de crédit offerts pendant 90 jours)" },
+            { "step": 2, "title": "Créer un projet", "action": "Console → Sélecteur de projet (en haut) → Nouveau projet → Nom: 'lab-ccp-debutant' → Créer" },
+            { "step": 3, "title": "Explorer la console", "action": "Naviguer dans le menu hamburger → Explorer : Compute Engine, Cloud Storage, BigQuery, IAM → Observer la barre de recherche universelle" },
+            { "step": 4, "title": "Ouvrir Cloud Shell", "action": "Cliquer l'icône >_ en haut à droite → Attendre l'initialisation → Taper : gcloud auth list → Observer votre compte actif" },
+            { "step": 5, "title": "Explorer avec gcloud", "action": "gcloud projects list → gcloud config get-value project → gcloud services list --enabled → Observer les APIs activées" }
+          ],
+          "expected_result": "Compte GCP créé, projet configuré, Cloud Shell fonctionnel",
+          "cleanup": "Aucun nettoyage nécessaire pour ce lab",
+          "gcloud_commands": [
+            "gcloud auth list",
+            "gcloud config get-value project",
+            "gcloud projects list",
+            "gcloud services list --enabled"
+          ],
+          "tips": "Cloud Shell est un environnement Linux gratuit et persistant (5Go) fourni par Google. Idéal pour tous les labs sans installation locale."
+        },
+        {
+          "id": "ccp-lab2",
+          "order": 2,
+          "title": "Déployer une application web sur Cloud Run",
+          "duration_min": 45,
+          "difficulty": "debutant",
+          "objectives": ["Déployer un conteneur sur Cloud Run", "Comprendre le serverless sur GCP", "Tester le scaling automatique"],
+          "prerequisites": ["Compte GCP avec projet créé"],
+          "steps": [
+            { "step": 1, "title": "Activer les APIs", "action": "Cloud Shell → gcloud services enable run.googleapis.com → gcloud services enable containerregistry.googleapis.com" },
+            { "step": 2, "title": "Déployer depuis une image publique", "action": "Console → Cloud Run → Créer un service → Image: us-docker.pkg.dev/cloudrun/container/hello:latest → Région: europe-west9 (Paris) → Trafic: Autoriser tout le trafic non authentifié" },
+            { "step": 3, "title": "Configurer le scaling", "action": "Avancé → Scaling → Instances min: 0 → Instances max: 3 → Déployer" },
+            { "step": 4, "title": "Tester le service", "action": "Copier l'URL HTTPS générée → Ouvrir dans le navigateur → Observer la page 'Hello Cloud Run'" },
+            { "step": 5, "title": "Observer les métriques", "action": "Cliquer sur le service → Métriques → Observer: nombre de requêtes, latence, instances actives" },
+            { "step": 6, "title": "Tester via CLI", "action": "Cloud Shell → gcloud run services describe hello --region europe-west9 → gcloud run services list" }
+          ],
+          "expected_result": "Service Cloud Run déployé, accessible via HTTPS, scaling configuré",
+          "cleanup": "gcloud run services delete hello --region europe-west9 --quiet",
+          "gcloud_commands": [
+            "gcloud services enable run.googleapis.com",
+            "gcloud run deploy hello --image us-docker.pkg.dev/cloudrun/container/hello:latest --region europe-west9 --allow-unauthenticated",
+            "gcloud run services list",
+            "gcloud run services delete hello --region europe-west9 --quiet"
+          ],
+          "tips": "Cloud Run scale-to-zero par défaut: 0 requête = 0 instance = 0 coût. Idéal pour les APIs et microservices."
+        },
+        {
+          "id": "ccp-lab3",
+          "order": 3,
+          "title": "Analyser des données avec BigQuery",
+          "duration_min": 40,
+          "difficulty": "debutant",
+          "objectives": ["Requêter des données publiques BigQuery", "Créer une requête SQL d'analyse", "Visualiser les résultats"],
+          "prerequisites": ["Compte GCP actif"],
+          "steps": [
+            { "step": 1, "title": "Ouvrir BigQuery", "action": "Console → BigQuery → Ouvrir l'éditeur de requêtes" },
+            { "step": 2, "title": "Explorer les datasets publics", "action": "Ajouter des données → Explorer les datasets publics → Chercher 'wikipedia' → Sélectionner bigquery-public-data.wikipedia.pageviews_2023" },
+            { "step": 3, "title": "Requête simple", "action": "Éditeur → Taper et exécuter:\nSELECT title, SUM(views) as total_views\nFROM `bigquery-public-data.wikipedia.pageviews_2023`\nWHERE wiki = 'fr'\nGROUP BY title\nORDER BY total_views DESC\nLIMIT 10" },
+            { "step": 4, "title": "Observer le coût avant exécution", "action": "Regarder en haut à droite le volume scanné (ex: 2.5 Go) → Calculer le coût: 5$/To = ~0.01$ pour ce lab" },
+            { "step": 5, "title": "Sauvegarder et exporter", "action": "Cliquer 'Sauvegarder les résultats' → Explorer dans Google Sheets ou télécharger en CSV" },
+            { "step": 6, "title": "Créer une vue", "action": "Actions → Créer une vue → Nom: 'top_articles_fr' → Sauvegarder dans votre dataset" }
+          ],
+          "expected_result": "Top 10 articles Wikipedia en français identifiés, requête SQL exécutée sur des données réelles",
+          "cleanup": "Supprimer la vue créée si vous en avez créé une",
+          "gcloud_commands": [
+            "bq query --use_legacy_sql=false 'SELECT title, SUM(views) as views FROM `bigquery-public-data.wikipedia.pageviews_2023` WHERE wiki=\"fr\" GROUP BY title ORDER BY views DESC LIMIT 5'",
+            "bq ls bigquery-public-data:",
+            "bq show bigquery-public-data:wikipedia"
+          ],
+          "tips": "BigQuery offre 1 To de requêtes gratuites par mois. Toujours vérifier le volume scanné avant d'exécuter une requête sur un grand dataset."
+        },
+        {
+          "id": "ccp-lab4",
+          "order": 4,
+          "title": "Configurer Cloud IAM et les rôles GCP",
+          "duration_min": 35,
+          "difficulty": "debutant",
+          "objectives": ["Créer et gérer des comptes de service", "Attribuer des rôles IAM", "Comprendre les rôles prédéfinis vs personnalisés"],
+          "prerequisites": ["Compte GCP avec projet créé"],
+          "steps": [
+            { "step": 1, "title": "Explorer les membres IAM", "action": "Console → IAM & Administration → IAM → Observer les membres actuels et leurs rôles" },
+            { "step": 2, "title": "Créer un compte de service", "action": "IAM & Admin → Comptes de service → Créer → Nom: 'sa-storage-reader' → Description: 'Lecture seule sur Cloud Storage'" },
+            { "step": 3, "title": "Attribuer un rôle au compte de service", "action": "Continuer → Sélectionner un rôle → Storage → Storage Object Viewer → Continuer → Créer" },
+            { "step": 4, "title": "Tester le principe du moindre privilège", "action": "IAM → Ajouter → Compte: votre email secondaire → Rôle: Viewer (lecture seule sur tout le projet) → Vérifier les permissions" },
+            { "step": 5, "title": "Utiliser Policy Analyzer", "action": "IAM → Policy Analyzer → Requête: 'Qui peut accéder à quel service ?' → Observer la liste des accès par ressource" }
+          ],
+          "expected_result": "Compte de service créé avec le principe du moindre privilège, rôles IAM compris",
+          "cleanup": "Supprimer le compte de service et retirer les accès ajoutés",
+          "gcloud_commands": [
+            "gcloud iam service-accounts create sa-storage-reader --description='Lecture Cloud Storage' --display-name='Storage Reader'",
+            "gcloud projects add-iam-policy-binding $PROJECT_ID --member='serviceAccount:sa-storage-reader@$PROJECT_ID.iam.gserviceaccount.com' --role='roles/storage.objectViewer'",
+            "gcloud iam service-accounts list",
+            "gcloud projects get-iam-policy $PROJECT_ID --format=json"
+          ],
+          "tips": "Les comptes de service sont l'équivalent GCP des rôles IAM AWS. Toujours préférer les comptes de service aux clés d'API pour les applications."
+        },
+        {
+          "id": "ccp-lab5",
+          "order": 5,
+          "title": "Utiliser l'API Gemini pour l'IA Générative",
+          "duration_min": 40,
+          "difficulty": "debutant",
+          "objectives": ["Accéder à l'API Gemini via Vertex AI", "Tester différents prompts", "Comprendre les paramètres du modèle"],
+          "prerequisites": ["Compte GCP avec facturation activée"],
+          "steps": [
+            { "step": 1, "title": "Activer Vertex AI", "action": "Console → Vertex AI → Activer l'API Vertex AI → Accepter" },
+            { "step": 2, "title": "Ouvrir Vertex AI Studio", "action": "Vertex AI → Vertex AI Studio → Freeform → Sélectionner: gemini-1.5-flash (rapide et économique)" },
+            { "step": 3, "title": "Tester un prompt simple", "action": "Taper: 'Résume en 3 points les avantages du cloud computing pour une PME' → Envoyer → Observer la réponse" },
+            { "step": 4, "title": "Tester le prompt engineering", "action": "Nouveau prompt: 'Tu es un expert cloud. Réponds uniquement en JSON avec les clés: avantage, explication, exemple. Donne 3 avantages du cloud.' → Observer le JSON généré" },
+            { "step": 5, "title": "Modifier les paramètres", "action": "Modifier Temperature: 0.2 → Régénérer → Comparer avec Temperature: 1.0 → Observer les différences de créativité" },
+            { "step": 6, "title": "Tester l'analyse d'image", "action": "Ajouter une image → Demander: 'Que vois-tu dans cette image ? Décris en détail.' → Observer les capacités multimodales" }
+          ],
+          "expected_result": "API Gemini testée avec différents prompts, multimodalité (texte + image) explorée",
+          "cleanup": "Aucun nettoyage (les appels API Gemini sont facturés par token, les tests sont quasi-gratuits avec Flash)",
+          "gcloud_commands": [
+            "gcloud services enable aiplatform.googleapis.com",
+            "curl -X POST -H 'Authorization: Bearer $(gcloud auth print-access-token)' -H 'Content-Type: application/json' https://us-central1-aiplatform.googleapis.com/v1/projects/$PROJECT_ID/locations/us-central1/publishers/google/models/gemini-1.5-flash:generateContent -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Hello Gemini!\"}]}]}'"
+          ],
+          "tips": "gemini-1.5-flash est 10x moins cher que gemini-1.5-pro. Pour les labs, utilisez toujours flash. Le quota gratuit est de 60 requêtes/minute."
+        }
+      ]
+    }
+  ]
+}

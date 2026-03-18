@@ -1,49 +1,403 @@
+# import asyncio
+# import json
+# import re
+# import os
+# import requests
+# from fastapi import FastAPI, Response, HTTPException
+# from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.responses import StreamingResponse
+# from pydantic import BaseModel
+# from typing import Optional
+
+# # 🚀 NOUVEL IMPORT : Pour gérer le cycle de vie de l'API proprement
+# from contextlib import asynccontextmanager
+
+# # 🟢 IMPORT POUR LA DÉTECTION DE LANGUE
+# from langdetect import detect 
+
+# # 🚀 IMPORT DE TON NOUVEL AGENT D'ACCOMPAGNEMENT
+# from Accompanying_Agent import AccompanyingAgent
+
+# # Initialisation du système
+# coach_system = AccompanyingAgent()
+
+# # ==========================================
+# # ⚙️ GESTION DU DÉMARRAGE (Lifespan)
+# # ==========================================
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     print("🚀 Démarrage du Serveur FastAPI (Cloud Coach)...")
+#     await coach_system.setup()
+    
+#     print("🔥 Lancement du Warm-up réseau (pour éviter la latence au premier client)...")
+#     try:
+#         await coach_system.search_index_manager.search("warmup test réseau")
+#         print(" Réseau débouché et prêt (IPv4) !")
+#     except Exception as e:
+#         print(f" Warm-up a échoué, mais l'API continue : {e}")
+
+#     print("✅ Index RAG vérifié. API prête à recevoir des requêtes !")
+    
+#     # L'application tourne tant qu'on est au niveau du "yield"
+#     yield 
+    
+#     print("🛑 Extinction du serveur, nettoyage des ressources...")
+
+# # On injecte le lifespan dans l'application
+# app = FastAPI(title="Subul Cloud Coach API", lifespan=lifespan)
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"], 
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # 📸 AJOUT : Le modèle accepte maintenant une image en base64
+# class ChatRequest(BaseModel):
+#     message: str
+#     user_id: str = "etudiant_anonyme"
+#     session_id: str = "session_defaut"
+#     lang: str = "fr"
+#     is_audio: bool = False
+#     base64_image: Optional[str] = None # <-- NOUVEAU CHAMP POUR LA VISION
+
+# # ==========================================
+# # 🧠 ROUTE 1 : LE CHAT (STREAMING + VISION)
+# # ==========================================
+# @app.post("/api/chat")
+# async def chat_endpoint(request: ChatRequest):
+#     try:
+#         lang_code = detect(request.message)
+#         final_lang = "fr" if "fr" in lang_code else "en"
+#     except:
+#         final_lang = "fr"
+
+#     has_image = "Oui 📸" if request.base64_image else "Non"
+#     print(f"📨 Requête de [{request.user_id} - {request.session_id}] | Langue : {final_lang} | Audio : {request.is_audio} | Image : {has_image}")
+    
+#     # On récupère l'agent configuré avec la bonne langue et le bon mode (Audio/Texte)
+#     agent = coach_system.get_agent(lang=final_lang, is_audio=request.is_audio)
+    
+#     async def generate_response():
+#         try:
+#             consigne_langue = "\n\n(Règle stricte: Formule ta réponse IMPÉRATIVEMENT en Français.)" if final_lang == "fr" else "\n\n(Strict rule: Answer entirely in English.)"
+#             message_securise = request.message + consigne_langue
+
+#             # ---------------------------------------------------------
+#             # 🌊 MODE TEXTE : VRAI STREAMING TEMPS RÉEL (Mot par mot)
+#             # ---------------------------------------------------------
+#             if not request.is_audio:
+#                 # 🚀 INJECTION : On passe l'image à la méthode run_stream
+#                 async for chunk in agent.run_stream(
+#                     message=message_securise, 
+#                     user_id=request.user_id, 
+#                     session_id=request.session_id,
+#                     base64_image=request.base64_image
+#                 ):
+#                     payload = {"chunk": chunk, "status": "streaming", "lang": final_lang}
+#                     yield json.dumps(payload) + "\n"
+                
+#                 yield json.dumps({"chunk": "", "status": "completed", "lang": final_lang}) + "\n"
+
+#             # ---------------------------------------------------------
+#             # 🔊 MODE AUDIO : BUFFER DE PHRASES (Pour Deepgram TTS)
+#             # ---------------------------------------------------------
+#             else:
+#                 full_text = ""
+#                 async for chunk in agent.run_stream(
+#                     message=message_securise, 
+#                     user_id=request.user_id, 
+#                     session_id=request.session_id,
+#                     base64_image=request.base64_image
+#                 ):
+#                     full_text += chunk
+                
+#                 # On le découpe en phrases propres pour la voix
+#                 sentences = re.split(r'(?<=[.!?]) +', full_text)
+#                 for sentence in sentences:
+#                     clean_sentence = sentence.strip()
+#                     if clean_sentence:
+#                         payload = {"chunk": clean_sentence, "status": "streaming", "lang": final_lang}
+#                         yield json.dumps(payload) + "\n"
+#                         await asyncio.sleep(0.05) # Petit délai naturel
+                
+#                 yield json.dumps({"chunk": "", "status": "completed", "lang": final_lang}) + "\n"
+                
+#         except Exception as e:
+#             print(f"❌ Erreur API : {e}")
+#             yield json.dumps({"chunk": f"Erreur serveur: {e}", "status": "error"}) + "\n"
+
+#     return StreamingResponse(generate_response(), media_type="application/x-ndjson")
+
+# # ==========================================
+# # 🔊 ROUTE 2 : LA BOUCHE (DEEPGRAM TTS)
+# # ==========================================
+# @app.get("/api/tts")
+# def tts_endpoint(text: str, lang: str = "fr"):
+#     print(f"🔊 Demande TTS ({lang}) : {text}")
+    
+#     model_name = "aura-2-agathe-fr" if lang == "fr" else "aura-2-arcas-en"
+    
+#     DG_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+#     DEEPGRAM_URL = f"https://api.deepgram.com/v1/speak?model={model_name}&encoding=linear16&container=wav"
+    
+#     headers = {
+#         "Authorization": f"Token {DG_API_KEY}",
+#         "Content-Type": "application/json"
+#     }
+    
+#     try:
+#         response = requests.post(DEEPGRAM_URL, headers=headers, json={"text": text})
+        
+#         if response.status_code != 200:
+#             print(f"❌ Erreur Serveur Deepgram: {response.text}")
+#             raise HTTPException(status_code=500, detail=f"Erreur Deepgram: {response.text}")
+
+#         return Response(content=response.content, media_type="audio/wav")
+        
+#     except Exception as e:
+#         print(f"❌ Erreur locale TTS : {e}")
+#         try:
+#             raise HTTPException(status_code=500, detail=str(e))
+#         except NameError:
+#             return {"error": str(e)}
+
+# # ==========================================
+# # 🛑 ROUTE 3 : FIN DE SESSION (BILAN FINOPS)
+# # ==========================================
+# class EndSessionRequest(BaseModel):
+#     user_id: str
+#     session_id: str
+
+# @app.post("/api/session/end")
+# async def end_session(request: EndSessionRequest):
+#     print(f"🚪 [API] L'étudiant {request.user_id} ferme la session Coach {request.session_id}. Lancement du bilan...")
+    
+#     try:
+#         # On appelle le MemoryManager via coach_system pour générer le bilan
+#         await coach_system.memory.trigger_background_summary(request.user_id, request.session_id)
+#         return {"status": "success", "message": "Bilan de session Coach généré avec succès."}
+    
+#     except Exception as e:
+#         print(f"❌ [API] Erreur lors de la clôture de session Coach: {e}")
+#         raise HTTPException(status_code=500, detail="Erreur lors de la génération du bilan.")
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+####################################################################cartesia
+# import asyncio
+# import json
+# import re
+# import os
+# from fastapi import FastAPI, Response, HTTPException
+# from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.responses import StreamingResponse
+# from pydantic import BaseModel
+# from typing import Optional
+# from contextlib import asynccontextmanager
+# import requests
+
+
+# from langdetect import detect 
+
+
+# from Accompanying_Agent import AccompanyingAgent
+
+
+# from cartesia import Cartesia
+
+
+# coach_system = AccompanyingAgent()
+
+
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     print("🚀 Démarrage du Serveur FastAPI (Subul Cloud Coach)...")
+#     await coach_system.setup()
+    
+#     print("🔥 Warm-up réseau (Azure Search)...")
+#     try:
+#         await coach_system.search_index_manager.search("azure cloud diagnostics")
+#         print("✅ Réseau prêt !")
+#     except Exception as e:
+#         print(f"⚠️ Warm-up a échoué: {e}")
+
+#     print("✅ API prête à recevoir des requêtes !")
+#     yield 
+#     print("🛑 Extinction du serveur...")
+
+# app = FastAPI(title="Subul Cloud Coach API", lifespan=lifespan)
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"], 
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # 📸 Modèle de requête compatible Vision
+# class ChatRequest(BaseModel):
+#     message: str
+#     user_id: str = "etudiant_anonyme"
+#     session_id: str = "session_defaut"
+#     is_audio: bool = False
+#     base64_image: Optional[str] = None 
+
+# @app.post("/api/chat")
+# async def chat_endpoint(request: ChatRequest):
+#     try:
+#         lang_code = detect(request.message)
+#         final_lang = "fr" if "fr" in lang_code else "en"
+#     except:
+#         final_lang = "fr"
+
+#     print(f"📨 Message de [{request.user_id}] | Langue : {final_lang} | Audio : {request.is_audio}")
+    
+#     agent = coach_system.get_agent(lang=final_lang, is_audio=request.is_audio)
+    
+#     async def generate_response():
+#         try:
+#             consigne = "\n\n(Réponds en Français.)" if final_lang == "fr" else "\n\n(Answer in English.)"
+#             message_securise = request.message + consigne
+
+#             # 🚀 FLUX PUR ET INSTANTANÉ (Zéro buffer, zéro blocage)
+#             async for chunk in agent.run_stream(
+#                 message=message_securise, 
+#                 user_id=request.user_id, 
+#                 session_id=request.session_id,
+#                 base64_image=request.base64_image
+#             ):
+#                 # On envoie EXACTEMENT ce que l'IA produit, à la milliseconde, direct à React !
+#                 yield json.dumps({"chunk": chunk, "status": "streaming", "lang": final_lang}) + "\n"
+
+#             yield json.dumps({"chunk": "", "status": "completed", "lang": final_lang}) + "\n"
+
+#         except Exception as e:
+#             print(f"❌ Erreur streaming : {e}")
+#             yield json.dumps({"chunk": f"Erreur: {e}", "status": "error"}) + "\n"
+
+#     return StreamingResponse(generate_response(), media_type="application/x-ndjson")
+# # ==========================================
+# # 🔊 ROUTE 2 : LA BOUCHE (CARTESIA TTS VIA REQUESTS)
+# # ==========================================
+# @app.get("/api/tts")
+# def tts_endpoint(text: str, lang: str = "fr"):
+#     print(f"🔊 Demande Cartesia TTS ({lang}) : {text}")
+    
+#     # 1. Sélection de la voix selon la langue
+#     if lang == "en":
+#         # Voix Anglaise (Ex: Tessa de ta doc)
+#         voice_id = "6ccbfb76-1fc6-48f7-b71d-91ac6298247b" 
+#     else:
+#         # Voix Française (Ex: Marie ou une voix FR de ton playground)
+#         # On peut utiliser une voix multilingue comme celle de Katie qui gère très bien le FR
+#         voice_id = "f786b574-daa5-4673-aa0c-cbe3e8534c02" 
+
+#     CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY")
+#     CARTESIA_URL = "https://api.cartesia.ai/tts/bytes"
+
+#     # 2. Configuration selon ta commande CURL
+#     headers = {
+#         "X-API-Key": CARTESIA_API_KEY,
+#         "Cartesia-Version": "2025-04-16", # Ta version de la doc
+#         "Content-Type": "application/json"
+#     }
+
+#     payload = {
+#         "model_id": "sonic-3",
+#         "transcript": text,
+#         "voice": {
+#             "mode": "id",
+#             "id": voice_id
+#         },
+#         "output_format": {
+#             "container": "wav",
+#             "encoding": "pcm_f32le",
+#             "sample_rate": 44100
+#         },
+#         "language": lang, # Important pour l'accent
+#         "generation_config": {
+#             "speed": 1,
+#             "volume": 1
+#         }
+#     }
+    
+#     try:
+        
+#         response = requests.post(CARTESIA_URL, headers=headers, json=payload)
+        
+#         if response.status_code != 200:
+#             error_detail = response.text
+#             print(f"❌ Erreur Cartesia: {error_detail}")
+#             raise HTTPException(status_code=500, detail=f"Cartesia Error: {error_detail}")
+
+       
+#         return Response(content=response.content, media_type="audio/wav")
+        
+#     except Exception as e:
+#         print(f"❌ Erreur Serveur TTS: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# class EndSessionRequest(BaseModel):
+#     user_id: str
+#     session_id: str
+
+# @app.post("/api/session/end")
+# async def end_session(request: EndSessionRequest):
+#     try:
+#         await coach_system.memory.trigger_background_summary(request.user_id, request.session_id)
+#         return {"status": "success"}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+########################################################################################################"
+
 import asyncio
 import json
 import re
 import os
-import requests
 from fastapi import FastAPI, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
-
-# 🚀 NOUVEL IMPORT : Pour gérer le cycle de vie de l'API proprement
 from contextlib import asynccontextmanager
+import requests
 
-# 🟢 IMPORT POUR LA DÉTECTION DE LANGUE
 from langdetect import detect 
 
-# 🚀 IMPORT DE TON NOUVEL AGENT D'ACCOMPAGNEMENT
 from Accompanying_Agent import AccompanyingAgent
 
-# Initialisation du système
+# (Optionnel si non utilisé directement ici, mais gardé selon ton code)
+from cartesia import Cartesia 
+
 coach_system = AccompanyingAgent()
 
-# ==========================================
-# ⚙️ GESTION DU DÉMARRAGE (Lifespan)
-# ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Démarrage du Serveur FastAPI (Cloud Coach)...")
+    print("🚀 Démarrage du Serveur FastAPI (Subul Cloud Coach)...")
     await coach_system.setup()
     
-    print("🔥 Lancement du Warm-up réseau (pour éviter la latence au premier client)...")
+    print("🔥 Warm-up réseau (Azure Search)...")
     try:
-        await coach_system.search_index_manager.search("warmup test réseau")
-        print("✅ Réseau débouché et prêt (IPv4) !")
+        await coach_system.search_index_manager.search("azure cloud diagnostics")
+        print("✅ Réseau prêt !")
     except Exception as e:
-        print(f"⚠️ Warm-up a échoué, mais l'API continue : {e}")
+        print(f"⚠️ Warm-up a échoué: {e}")
 
-    print("✅ Index RAG vérifié. API prête à recevoir des requêtes !")
-    
-    # L'application tourne tant qu'on est au niveau du "yield"
+    print("✅ API prête à recevoir des requêtes !")
     yield 
-    
-    print("🛑 Extinction du serveur, nettoyage des ressources...")
+    print("🛑 Extinction du serveur...")
 
-# On injecte le lifespan dans l'application
 app = FastAPI(title="Subul Cloud Coach API", lifespan=lifespan)
 
 app.add_middleware(
@@ -54,115 +408,125 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 📸 AJOUT : Le modèle accepte maintenant une image en base64
+# 📸 Modèle de requête compatible Vision
 class ChatRequest(BaseModel):
     message: str
     user_id: str = "etudiant_anonyme"
     session_id: str = "session_defaut"
-    lang: str = "fr"
     is_audio: bool = False
-    base64_image: Optional[str] = None # <-- NOUVEAU CHAMP POUR LA VISION
+    base64_image: Optional[str] = None 
 
-# ==========================================
-# 🧠 ROUTE 1 : LE CHAT (STREAMING + VISION)
-# ==========================================
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
+    # 🧠 Détection de langue sécurisée avec langdetect
     try:
-        lang_code = detect(request.message)
-        final_lang = "fr" if "fr" in lang_code else "en"
-    except:
-        final_lang = "fr"
+        clean_text = request.message.strip()
+        # langdetect a besoin d'un minimum de texte pour ne pas crasher
+        if len(clean_text) >= 2:
+            lang_code = detect(clean_text)
+            final_lang = "fr" if lang_code == "fr" else "en"
+        else:
+            final_lang = "fr"
+    except Exception:
+        final_lang = "fr" # Fallback en français si erreur
 
-    has_image = "Oui 📸" if request.base64_image else "Non"
-    print(f"📨 Requête de [{request.user_id} - {request.session_id}] | Langue : {final_lang} | Audio : {request.is_audio} | Image : {has_image}")
+    print(f"📨 Message de [{request.user_id}] | Langue détectée : {final_lang} | Audio : {request.is_audio}")
     
-    # On récupère l'agent configuré avec la bonne langue et le bon mode (Audio/Texte)
     agent = coach_system.get_agent(lang=final_lang, is_audio=request.is_audio)
     
     async def generate_response():
         try:
-            consigne_langue = "\n\n(Règle stricte: Formule ta réponse IMPÉRATIVEMENT en Français.)" if final_lang == "fr" else "\n\n(Strict rule: Answer entirely in English.)"
-            message_securise = request.message + consigne_langue
+            consigne = "\n\n(Réponds en Français.)" if final_lang == "fr" else "\n\n(Answer in English.)"
+            message_securise = request.message + consigne
 
-            # ---------------------------------------------------------
-            # 🌊 MODE TEXTE : VRAI STREAMING TEMPS RÉEL (Mot par mot)
-            # ---------------------------------------------------------
-            if not request.is_audio:
-                # 🚀 INJECTION : On passe l'image à la méthode run_stream
-                async for chunk in agent.run_stream(
-                    message=message_securise, 
-                    user_id=request.user_id, 
-                    session_id=request.session_id,
-                    base64_image=request.base64_image
-                ):
-                    payload = {"chunk": chunk, "status": "streaming", "lang": final_lang}
-                    yield json.dumps(payload) + "\n"
-                
-                yield json.dumps({"chunk": "", "status": "completed", "lang": final_lang}) + "\n"
+            # 🚀 FLUX PUR ET INSTANTANÉ (Zéro buffer, zéro blocage)
+            async for chunk in agent.run_stream(
+                message=message_securise, 
+                user_id=request.user_id, 
+                session_id=request.session_id,
+                base64_image=request.base64_image
+            ):
+                # On envoie EXACTEMENT ce que l'IA produit, à la milliseconde, direct à React !
+                yield json.dumps({"chunk": chunk, "status": "streaming", "lang": final_lang}) + "\n"
 
-            # ---------------------------------------------------------
-            # 🔊 MODE AUDIO : BUFFER DE PHRASES (Pour Deepgram TTS)
-            # ---------------------------------------------------------
-            else:
-                full_text = ""
-                async for chunk in agent.run_stream(
-                    message=message_securise, 
-                    user_id=request.user_id, 
-                    session_id=request.session_id,
-                    base64_image=request.base64_image
-                ):
-                    full_text += chunk
-                
-                # On le découpe en phrases propres pour la voix
-                sentences = re.split(r'(?<=[.!?]) +', full_text)
-                for sentence in sentences:
-                    clean_sentence = sentence.strip()
-                    if clean_sentence:
-                        payload = {"chunk": clean_sentence, "status": "streaming", "lang": final_lang}
-                        yield json.dumps(payload) + "\n"
-                        await asyncio.sleep(0.05) # Petit délai naturel
-                
-                yield json.dumps({"chunk": "", "status": "completed", "lang": final_lang}) + "\n"
-                
+            yield json.dumps({"chunk": "", "status": "completed", "lang": final_lang}) + "\n"
+
         except Exception as e:
-            print(f"❌ Erreur API : {e}")
-            yield json.dumps({"chunk": f"Erreur serveur: {e}", "status": "error"}) + "\n"
+            print(f"❌ Erreur streaming : {e}")
+            yield json.dumps({"chunk": f"Erreur: {e}", "status": "error"}) + "\n"
 
     return StreamingResponse(generate_response(), media_type="application/x-ndjson")
 
 # ==========================================
-# 🔊 ROUTE 2 : LA BOUCHE (DEEPGRAM TTS)
+# 🔊 ROUTE 2 : LA BOUCHE (CARTESIA TTS VIA REQUESTS) - Fallback
 # ==========================================
 @app.get("/api/tts")
 def tts_endpoint(text: str, lang: str = "fr"):
-    print(f"🔊 Demande TTS ({lang}) : {text}")
+    print(f"🔊 Demande Cartesia TTS ({lang}) : {text}")
     
-    model_name = "aura-2-agathe-fr" if lang == "fr" else "aura-2-arcas-en"
-    
-    DG_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-    DEEPGRAM_URL = f"https://api.deepgram.com/v1/speak?model={model_name}&encoding=linear16&container=wav"
-    
+    # 1. Sélection de la voix selon la langue
+    if lang == "en":
+        # Voix Anglaise (Ex: Tessa de ta doc)
+        voice_id = "6ccbfb76-1fc6-48f7-b71d-91ac6298247b" 
+    else:
+        # Voix Française (Ex: Marie ou une voix FR de ton playground)
+        # On peut utiliser une voix multilingue comme celle de Katie qui gère très bien le FR
+        voice_id = "f786b574-daa5-4673-aa0c-cbe3e8534c02" 
+
+    CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY")
+    CARTESIA_URL = "https://api.cartesia.ai/tts/bytes"
+
+    # 2. Configuration selon ta commande CURL
     headers = {
-        "Authorization": f"Token {DG_API_KEY}",
+        "X-API-Key": CARTESIA_API_KEY,
+        "Cartesia-Version": "2025-04-16", # Ta version de la doc
         "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model_id": "sonic-3",
+        "transcript": text,
+        "voice": {
+            "mode": "id",
+            "id": voice_id
+        },
+        "output_format": {
+            "container": "wav",
+            "encoding": "pcm_f32le",
+            "sample_rate": 44100
+        },
+        "language": lang, # Important pour l'accent
+        "generation_config": {
+            "speed": 1,
+            "volume": 1
+        }
     }
     
     try:
-        response = requests.post(DEEPGRAM_URL, headers=headers, json={"text": text})
+        response = requests.post(CARTESIA_URL, headers=headers, json=payload)
         
         if response.status_code != 200:
-            print(f"❌ Erreur Serveur Deepgram: {response.text}")
-            raise HTTPException(status_code=500, detail=f"Erreur Deepgram: {response.text}")
+            error_detail = response.text
+            print(f"❌ Erreur Cartesia: {error_detail}")
+            raise HTTPException(status_code=500, detail=f"Cartesia Error: {error_detail}")
 
         return Response(content=response.content, media_type="audio/wav")
         
     except Exception as e:
-        print(f"❌ Erreur locale TTS : {e}")
-        try:
-            raise HTTPException(status_code=500, detail=str(e))
-        except NameError:
-            return {"error": str(e)}
+        print(f"❌ Erreur Serveur TTS: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class EndSessionRequest(BaseModel):
+    user_id: str
+    session_id: str
+
+@app.post("/api/session/end")
+async def end_session(request: EndSessionRequest):
+    try:
+        await coach_system.memory.trigger_background_summary(request.user_id, request.session_id)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
