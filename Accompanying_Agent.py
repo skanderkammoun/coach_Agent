@@ -21,7 +21,6 @@ env_path = os.path.join(_CURRENT_DIR, ".env.txt")
 
 if os.path.exists(env_path):
     print(f" Configuration chargée depuis : {env_path}")
-    # 🚀 CORRECTION 1 : override=True pour écraser les anciennes variables "fantômes" du terminal
     load_dotenv(dotenv_path=env_path, override=True)
 else:
     print(f" Erreur : Fichier config introuvable à {env_path}")
@@ -40,54 +39,42 @@ class MemoryAgentProxy:
         self.instructions = instructions   
 
     async def run_stream(self, message: str, user_id: str, session_id: str, base64_image: Optional[str] = None):
-        print("\n⏱️ --- DÉBUT DU CHRONO (ULTRA-RÉSILIENT & MULTIMODAL) ---")
+        print("\n --- DÉBUT DU CHRONO (ULTRA-RÉSILIENT & MULTIMODAL) ---")
         t0 = time.time()
-
-        # 1. Lancement des tâches SANS BLOQUER
         task_history = asyncio.create_task(self.memory.get_full_context(user_id, session_id))
-        
-        # Si on a une image mais pas de texte, on crée un texte par défaut pour la recherche
         search_query = message if message.strip() else "Analyse cette erreur sur la capture d'écran"
         task_search = asyncio.create_task(self.search_manager.search(search_query))
-        
-        # On sauvegarde le message texte en fond
         asyncio.create_task(self.memory.add_user_message(user_id, session_id, message or "[Image envoyée]"))
-
-        # 2. RÉCUPÉRATION SÉCURISÉE
         try:
             res_history, res_search = await asyncio.wait_for(
                 asyncio.gather(task_history, task_search, return_exceptions=True),
-                timeout=10.0 # Timeout généreux pour le RAG
+                timeout=10.0 
             )
             
             if isinstance(res_history, Exception):
-                print(f"⚠️ Erreur Mémoire ignorée: {res_history}")
+                print(f"Erreur Mémoire ignorée: {res_history}")
                 long_ctx, short_hist = "", []
             else:
                 long_ctx, short_hist = res_history
 
             if isinstance(res_search, Exception):
-                print(f"⚠️ Erreur Search ignorée: {res_search}")
+                print(f" Erreur Search ignorée: {res_search}")
                 context_docs = "Documentation momentanément indisponible."
             else:
                 context_docs = res_search
 
         except Exception as e:
-            print(f"🚨 Erreur critique parallèle ou Timeout: {e}")
+            print(f" Erreur critique parallèle ou Timeout: {e}")
             long_ctx, short_hist, context_docs = "", [], ""
 
         t1 = time.time()
-        print(f"⏱️ [1+2a] Préparation terminée en {t1 - t0:.2f}s")
-
-        # 3. Construction du prompt (Texte + Contexte)
+        print(f" [1+2a] Préparation terminée en {t1 - t0:.2f}s")
         history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in short_hist[-4:]])
         augmented_message_text = f"{long_ctx}\n[DOCS]: {context_docs}\n[QUESTION]: {message}"
-
-        # 👁️ FORMATAGE MULTIMODAL POUR GPT-4o
         user_content_payload = [{"type": "text", "text": augmented_message_text}]
         
         if base64_image:
-            print("📸 Capture d'écran détectée ! Injection dans le payload de GPT-4o...")
+            print("Capture d'écran détectée ! Injection dans le payload de GPT-4o...")
             user_content_payload.append({
                 "type": "image_url",
                 "image_url": {
@@ -95,7 +82,7 @@ class MemoryAgentProxy:
                 }
             })
 
-        # 🤖 4. STREAMING DIRECT
+        
         full_response = ""
         stream = await self.oai_client.chat.completions.create(
             model=self.chat_model,
@@ -114,9 +101,9 @@ class MemoryAgentProxy:
                 yield text_chunk
 
         t2 = time.time()
-        print(f"⏱️ [2b] Fin du Streaming : {t2 - t1:.2f} secondes")
+        print(f" [2b] Fin du Streaming : {t2 - t1:.2f} secondes")
 
-        # 5. Sauvegarde finale en arrière-plan (SANS LE RÉSUMÉ FINOPS)
+        
         asyncio.create_task(self.memory.add_agent_message(user_id, session_id, full_response))
 
 
@@ -228,13 +215,12 @@ async def test_terminal():
     user_id = "etudiant_test_001"
     session_id = "session_lab8_001"
 
-    print("\n✅ Agent prêt ! Tape 'quitter' pour arrêter le test.")
+    print("\n Agent prêt ! Tape 'quitter' pour arrêter le test.")
 
     while True:
         texte = input("\n👨‍🎓 Toi : ")
         if texte.lower() in ['quitter', 'exit', 'quit']:
             print("🚪 Déconnexion en cours... Déclenchement du bilan pédagogique (FinOps)...")
-            # 🚀 CORRECTION : On force le résumé avant de fermer le programme !
             await agent_system.memory.trigger_background_summary(user_id, session_id)
             print("👋 Fin du test local.")
             break
@@ -248,11 +234,11 @@ async def test_terminal():
                 try:
                     with open(chemin_image, "rb") as img_file:
                         base64_img = base64.b64encode(img_file.read()).decode('utf-8')
-                    print(f"   [✅ Image chargée : {os.path.basename(chemin_image)}]")
+                    print(f"   [Image chargée : {os.path.basename(chemin_image)}]")
                 except Exception as e:
-                    print(f"   [❌ Erreur lors de la lecture de l'image : {e}]")
+                    print(f"   [Erreur lors de la lecture de l'image : {e}]")
             else:
-                print(f"   [⚠️ Fichier introuvable, l'Agent répondra sans l'image]")
+                print(f"   [Fichier introuvable, l'Agent répondra sans l'image]")
 
         print("\n🤖 Coach : ", end="", flush=True)
 
@@ -267,13 +253,13 @@ async def test_terminal():
             print() 
             
         except Exception as e:
-            print(f"\n❌ Erreur pendant le stream : {e}")
+            print(f"\n Erreur pendant le stream : {e}")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(test_terminal())
     except KeyboardInterrupt:
-        print("\n👋 Arrêt manuel du Coach.")
+        print("\n Arrêt manuel du Coach.")
     except Exception as e:
-        print(f"\n💥 Erreur au démarrage : {e}")
+        print(f"\n Erreur au démarrage : {e}")
