@@ -39,7 +39,7 @@ Le coach utilise deux voix spécifiques selon la langue détectée pour assurer 
 * 🇬🇧 **Voix Anglaise** : `6ccbfb76-1fc6-48f7-b71d-91ac6298247b`
 * 🇫🇷 **Voix Française** : `65b25c5d-ff07-4687-a04c-da2f43ef6fa9`
 
-*Note : Ces ID doivent correspondre à la fois dans le fichier frontend (`App.jsx`) pour le flux WebSockets et dans le fichier backend (`api_server.py`) pour la route de fallback.*
+*Note : Ces ID doivent correspondre à la fois dans le fichier frontend (`App.jsx`) pour le flux WebSockets et dans le fichier backend (`api_coach.py`) pour la route de fallback.*
 
 ---
 
